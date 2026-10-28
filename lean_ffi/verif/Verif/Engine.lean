@@ -255,17 +255,22 @@ partial def anyNodeAux (dag : DAG) (p : NodeId → Bool) (vis : HashMap NodeId B
       (vis.insert n b, b)
     | _ => (vis.insert n false, false)
 
-/-- Probing `Test`: is the whole tuple free of secrets? -/
+/-- Probing `Test`: does some root of the tuple reach a secret?  A lookup of the
+    per-node `secretDep` bit (computed at allocation; see `DAG`). -/
 def tupleHasSecret (dag : DAG) (tuple : Array NodeId) : Bool :=
-  (tuple.foldl (fun (v, acc) r =>
-    if acc then (v, true) else anyNodeAux dag dag.isSecretNode v r)
-    (({} : HashMap NodeId Bool), false)).2
+  tuple.any dag.dependsOnSecret
 
 /-- Substitute leaf `r` by node `t` (= `e+r`) throughout `n`, single level (never
-    descending into `t`).  Memoised; `mkXor`/`mkAnd` re-canonicalise. -/
+    descending into `t`).  Memoised; `mkXor`/`mkAnd` re-canonicalise.
+
+    A sub-DAG whose random support does not contain `r` is returned as is:
+    rebuilding it would re-intern the same canonical node (its children are
+    already canonical), so skipping it is exact and avoids walking the cone of
+    every node that `r` never reaches. -/
 partial def substNode (g : GlobalDAG) (r t : NodeId) (memo : HashMap NodeId NodeId) (n : NodeId)
     : GlobalDAG × HashMap NodeId NodeId × NodeId :=
   if n == r then (g, memo, t)
+  else if g.dag.disjointSupport n r then (g, memo, n)
   else match memo[n]? with
   | some m => (g, memo, m)
   | none   =>
@@ -335,23 +340,14 @@ def findGeneralRandom (dag : DAG) (randoms : Array NodeId) (s : DFSState)
     let occ := (s.totalParCount[r]?).getD 0 + (if rootSet.contains r then 1 else 0)
     if occ < 2 then continue
     if (s.xorParCount[r]?).getD 0 == 0 then continue
-    -- `anyNodeAux`'s memo is keyed by node for a *fixed* predicate (here
-    -- `(· == r)`), so we can share one `vis` across all of `r`'s additive
-    -- parents and their children instead of re-walking the sub-DAG from
-    -- scratch on every check.
-    let mut vis : HashMap NodeId Bool := {}
+    -- "does child `c` mention `r`?" is a test on the per-node random support
+    -- (`r` is a random leaf, so its support is the single bit of `r`).
     let mut chosen : Option NodeId := none
     for x1 in (s.parents[r]?).getD #[] do
       if chosen.isSome then continue
       match dag.kind? x1 with
       | some (NodeKind.xorNode ch) =>
-        let mut clear := true
-        for c in ch do
-          if clear && c != r then
-            let (vis', reaches) := anyNodeAux dag (· == r) vis c
-            vis := vis'
-            if reaches then clear := false
-        if clear then chosen := some x1
+        if ch.all (fun c => c == r || dag.disjointSupport c r) then chosen := some x1
       | _ => pure ()
     match chosen with
     | none    => pure ()
