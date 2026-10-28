@@ -1,0 +1,48 @@
+=== end-to-end checkDProbing (best of 3) ===
+E2E	ISW AND (2 shares)	1	S	discharges=7	ms=0.1
+E2E	ISW AND (3 shares)	2	S	discharges=34	ms=1.5
+E2E	ISW AND (4 shares)	3	S	discharges=338	ms=29.2
+E2E	ISW AND (5 shares)	4	S	discharges=4735	ms=605.3
+E2E	DOM AND (2 shares)	1	S	discharges=11	ms=0.2
+E2E	DOM AND (2 shares) o2	2	I	discharges=2	ms=0.0
+E2E	DOM AND (3 shares)	2	S	discharges=88	ms=3.5
+E2E	DOM AND (3 shares) o3	3	I	discharges=2	ms=0.2
+E2E	DOM AND (4 shares)	3	S	discharges=859	ms=66.5
+E2E	Trichina AND	1	S	discharges=11	ms=0.2
+E2E	Trichina AND (bad assoc)	1	I	discharges=10	ms=0.3
+E2E	TI AND (3 shares)	1	S	discharges=9	ms=0.3
+E2E	TI AND (3 shares) o2	2	I	discharges=10	ms=0.4
+E2E	Additive refresh (3 shares)	2	S	discharges=6	ms=0.0
+E2E	Additive refresh (4 shares)	3	S	discharges=11	ms=0.0
+E2E	ISW refresh (3 shares)	2	S	discharges=6	ms=0.0
+E2E	ISW refresh (4 shares)	3	S	discharges=12	ms=0.2
+E2E	DOM Keccak χ (2 shares)	1	S	discharges=49	ms=8.9
+E2E	DOM Keccak χ (3 shares)	2	S	discharges=2865	ms=1227.5
+E2E	TI Keccak χ (3 shares)	1	S	discharges=43	ms=14.0
+E2E	TI Keccak χ (3 shares) o2	2	I	discharges=57	ms=13.4
+E2E	Q⁴₁₂ (2-share direct)	1	S	discharges=27	ms=1.8
+E2E	Q⁴₁₂ TI (3 shares)	1	S	discharges=25	ms=3.7
+E2E	TI Fides AB1 (4 shares)	1	S	discharges=55	ms=1428.7
+E2E	x+yz TI direct (3 shares)	1	S	discharges=7	ms=0.4
+E2E	x+yz TI with CT (3 shares)	1	S	discharges=11	ms=0.6
+E2E	x+yz TI (4 shares)	2	S	discharges=78	ms=7.1
+E2E	x+yz TI (4 shares) o3	3	I	discharges=102	ms=7.3
+E2E	x+yz+xyz TI (4 shares)	1	S	discharges=31	ms=31.3
+E2E	xy TI virtual variable	1	S	discharges=9	ms=1.7
+E2E	xy TI virtual share	1	S	discharges=9	ms=0.9
+E2E	xy TI 4to3 shares	1	S	discharges=11	ms=0.7
+E2E	Q31 d+1	1	S	discharges=13	ms=0.3
+E2E	Q32 d+1	1	S	discharges=25	ms=1.5
+E2E	Q33 d+1	1	I	discharges=18	ms=2.7
+E2E	Q44 d+1	1	S	discharges=15	ms=0.4
+E2E	Q412 d+1	1	S	discharges=25	ms=1.7
+E2E	Q4293 d+1	1	S	discharges=31	ms=2.5
+E2E	Q4294 d+1	1	S	discharges=23	ms=1.1
+E2E	Q4299 d+1	1	S	discharges=35	ms=4.1
+E2E	Q4300 d+1	1	I	discharges=18	ms=3.0
+E2E-TOTAL	ms=3475
+=== per-call profile (seeded random probe sets) ===
+CALL	DOM Keccak χ (4 shares)	3	calls=2000	secure=2000	engine_us=16	extend_us=41	dag=281->1530	first100_us=63	last100_us=60
+CALL	DOM AND (5 shares)	4	calls=2000	secure=2000	engine_us=17	extend_us=22	dag=87->958	first100_us=41	last100_us=41
+CALL	ISW AND (5 shares)	4	calls=2000	secure=2000	engine_us=18	extend_us=22	dag=87->1049	first100_us=41	last100_us=42
+CALL	TI Fides AB1 (4 shares)	1	calls=300	secure=300	engine_us=50	extend_us=669	dag=603->1962	first100_us=668	last100_us=774

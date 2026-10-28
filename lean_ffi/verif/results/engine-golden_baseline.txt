@@ -1,0 +1,86 @@
+E2E	ISW AND (2 shares)	1	S	discharges=7	distinct=7	main=3	free=2	extensions=3	anf=0
+GOLD	ISW AND (2 shares)	1	probes=100	secure=100	coup=91	safe=169	anf=0	unionSecure=7	hash=15375806628371789284
+E2E	ISW AND (3 shares)	2	S	discharges=34	distinct=31	main=10	free=31	extensions=10	anf=0
+GOLD	ISW AND (3 shares)	2	probes=100	secure=100	coup=143	safe=853	anf=0	unionSecure=17	hash=7504439211447226846
+E2E	ISW AND (4 shares)	3	S	discharges=338	distinct=329	main=77	free=437	extensions=75	anf=0
+GOLD	ISW AND (4 shares)	3	probes=100	secure=100	coup=209	safe=2022	anf=0	unionSecure=35	hash=16762611121489716177
+E2E	ISW AND (5 shares)	4	S	discharges=4735	distinct=4655	main=920	free=8078	extensions=902	anf=0
+GOLD	ISW AND (5 shares)	4	probes=100	secure=100	coup=253	safe=3823	anf=0	unionSecure=55	hash=17892948302693979397
+E2E	DOM AND (2 shares)	1	S	discharges=11	distinct=11	main=5	free=2	extensions=5	anf=0
+GOLD	DOM AND (2 shares)	1	probes=100	secure=100	coup=96	safe=200	anf=0	unionSecure=4	hash=11828337853906273813
+E2E	DOM AND (2 shares) o2	2	I	discharges=2	distinct=2	main=0	free=0	extensions=0	anf=0
+GOLD	DOM AND (2 shares) o2	2	probes=100	secure=66	coup=117	safe=148	anf=0	unionSecure=0	hash=8553377910435420112
+E2E	DOM AND (3 shares)	2	S	discharges=88	distinct=84	main=29	free=44	extensions=29	anf=0
+GOLD	DOM AND (3 shares)	2	probes=100	secure=100	coup=157	safe=806	anf=0	unionSecure=9	hash=9976420872259228752
+E2E	DOM AND (3 shares) o3	3	I	discharges=2	distinct=2	main=0	free=0	extensions=0	anf=0
+GOLD	DOM AND (3 shares) o3	3	probes=100	secure=94	coup=223	safe=794	anf=0	unionSecure=0	hash=11284216374315469887
+E2E	DOM AND (4 shares)	3	S	discharges=859	distinct=847	main=220	free=784	extensions=220	anf=0
+GOLD	DOM AND (4 shares)	3	probes=100	secure=100	coup=209	safe=1983	anf=0	unionSecure=32	hash=2637178841650442747
+E2E	Trichina AND	1	S	discharges=11	distinct=11	main=5	free=2	extensions=5	anf=0
+GOLD	Trichina AND	1	probes=100	secure=100	coup=70	safe=236	anf=0	unionSecure=11	hash=9186317180189368983
+E2E	Trichina AND (bad assoc)	1	I	discharges=10	distinct=10	main=4	free=1	extensions=4	anf=0
+GOLD	Trichina AND (bad assoc)	1	probes=100	secure=70	coup=49	safe=140	anf=0	unionSecure=7	hash=14679241408119820208
+E2E	TI AND (3 shares)	1	S	discharges=9	distinct=9	main=4	free=9	extensions=4	anf=0
+GOLD	TI AND (3 shares)	1	probes=100	secure=100	coup=82	safe=559	anf=0	unionSecure=2	hash=17233531854576782013
+E2E	TI AND (3 shares) o2	2	I	discharges=10	distinct=9	main=4	free=5	extensions=4	anf=0
+GOLD	TI AND (3 shares) o2	2	probes=100	secure=69	coup=87	safe=348	anf=0	unionSecure=0	hash=8789905813078565496
+E2E	Additive refresh (3 shares)	2	S	discharges=6	distinct=5	main=2	free=1	extensions=2	anf=0
+GOLD	Additive refresh (3 shares)	2	probes=100	secure=100	coup=51	safe=283	anf=0	unionSecure=0	hash=14055016350606511906
+E2E	Additive refresh (4 shares)	3	S	discharges=11	distinct=8	main=4	free=6	extensions=3	anf=0
+GOLD	Additive refresh (4 shares)	3	probes=100	secure=100	coup=47	safe=498	anf=0	unionSecure=0	hash=4101401589247852605
+E2E	ISW refresh (3 shares)	2	S	discharges=6	distinct=5	main=2	free=4	extensions=2	anf=0
+GOLD	ISW refresh (3 shares)	2	probes=100	secure=100	coup=66	safe=400	anf=0	unionSecure=0	hash=2140467847425566304
+E2E	ISW refresh (4 shares)	3	S	discharges=12	distinct=8	main=4	free=24	extensions=3	anf=0
+GOLD	ISW refresh (4 shares)	3	probes=100	secure=100	coup=94	safe=900	anf=0	unionSecure=0	hash=7928874287180630736
+E2E	DOM Keccak χ (2 shares)	1	S	discharges=49	distinct=49	main=24	free=29	extensions=24	anf=0
+GOLD	DOM Keccak χ (2 shares)	1	probes=100	secure=100	coup=94	safe=1091	anf=4	unionSecure=63	hash=10133810222818917167
+E2E	DOM Keccak χ (3 shares)	2	S	discharges=2865	distinct=2845	main=1357	free=2671	extensions=1357	anf=0
+GOLD	DOM Keccak χ (3 shares)	2	probes=100	secure=100	coup=146	safe=4330	anf=7	unionSecure=82	hash=1072504071632432045
+E2E	TI Keccak χ (3 shares)	1	S	discharges=43	distinct=43	main=21	free=68	extensions=21	anf=0
+GOLD	TI Keccak χ (3 shares)	1	probes=100	secure=100	coup=61	safe=3974	anf=0	unionSecure=77	hash=14806314920926704723
+E2E	TI Keccak χ (3 shares) o2	2	I	discharges=57	distinct=53	main=25	free=92	extensions=25	anf=0
+GOLD	TI Keccak χ (3 shares) o2	2	probes=100	secure=99	coup=132	safe=3558	anf=4	unionSecure=1	hash=8577015088444906420
+E2E	Q⁴₁₂ (2-share direct)	1	S	discharges=27	distinct=27	main=13	free=16	extensions=13	anf=0
+GOLD	Q⁴₁₂ (2-share direct)	1	probes=100	secure=100	coup=115	safe=819	anf=10	unionSecure=12	hash=8072455505410201353
+E2E	Q⁴₁₂ TI (3 shares)	1	S	discharges=25	distinct=25	main=12	free=30	extensions=12	anf=0
+GOLD	Q⁴₁₂ TI (3 shares)	1	probes=100	secure=100	coup=80	safe=1713	anf=0	unionSecure=46	hash=12644986081400208414
+E2E	TI Fides AB1 (4 shares)	1	S	discharges=55	distinct=55	main=27	free=537	extensions=27	anf=0
+GOLD	TI Fides AB1 (4 shares)	1	probes=100	secure=100	coup=222	safe=16990	anf=0	unionSecure=46	hash=12328475616820076673
+E2E	x+yz TI direct (3 shares)	1	S	discharges=7	distinct=7	main=3	free=10	extensions=3	anf=0
+GOLD	x+yz TI direct (3 shares)	1	probes=100	secure=100	coup=59	safe=701	anf=0	unionSecure=73	hash=13839652911777136210
+E2E	x+yz TI with CT (3 shares)	1	S	discharges=11	distinct=11	main=5	free=9	extensions=5	anf=0
+GOLD	x+yz TI with CT (3 shares)	1	probes=100	secure=100	coup=65	safe=665	anf=0	unionSecure=76	hash=9728050079659312278
+E2E	x+yz TI (4 shares)	2	S	discharges=78	distinct=75	main=29	free=115	extensions=29	anf=0
+GOLD	x+yz TI (4 shares)	2	probes=100	secure=100	coup=140	safe=1433	anf=0	unionSecure=39	hash=1799743798003384872
+E2E	x+yz TI (4 shares) o3	3	I	discharges=102	distinct=93	main=28	free=99	extensions=27	anf=0
+GOLD	x+yz TI (4 shares) o3	3	probes=100	secure=98	coup=181	safe=1457	anf=0	unionSecure=4	hash=5942197703408541389
+E2E	x+yz+xyz TI (4 shares)	1	S	discharges=31	distinct=31	main=15	free=63	extensions=15	anf=0
+GOLD	x+yz+xyz TI (4 shares)	1	probes=100	secure=100	coup=78	safe=3211	anf=0	unionSecure=26	hash=11707082555007027347
+E2E	xy TI virtual variable	1	S	discharges=9	distinct=9	main=4	free=23	extensions=4	anf=0
+GOLD	xy TI virtual variable	1	probes=100	secure=100	coup=97	safe=1262	anf=0	unionSecure=5	hash=16087002097719370884
+E2E	xy TI virtual share	1	S	discharges=9	distinct=9	main=4	free=15	extensions=4	anf=0
+GOLD	xy TI virtual share	1	probes=100	secure=100	coup=80	safe=885	anf=0	unionSecure=11	hash=1238142436671776209
+E2E	xy TI 4to3 shares	1	S	discharges=11	distinct=11	main=5	free=8	extensions=5	anf=0
+GOLD	xy TI 4to3 shares	1	probes=100	secure=100	coup=82	safe=529	anf=0	unionSecure=35	hash=1143615282989877903
+E2E	Q31 d+1	1	S	discharges=13	distinct=13	main=6	free=11	extensions=6	anf=0
+GOLD	Q31 d+1	1	probes=100	secure=100	coup=72	safe=597	anf=0	unionSecure=32	hash=7373520259528425898
+E2E	Q32 d+1	1	S	discharges=25	distinct=25	main=12	free=13	extensions=12	anf=0
+GOLD	Q32 d+1	1	probes=100	secure=100	coup=117	safe=598	anf=8	unionSecure=5	hash=8695783825143249934
+E2E	Q33 d+1	1	I	discharges=18	distinct=18	main=8	free=22	extensions=8	anf=0
+GOLD	Q33 d+1	1	probes=100	secure=83	coup=97	safe=540	anf=6	unionSecure=0	hash=5021106683870496340
+E2E	Q44 d+1	1	S	discharges=15	distinct=15	main=7	free=14	extensions=7	anf=0
+GOLD	Q44 d+1	1	probes=100	secure=100	coup=65	safe=796	anf=0	unionSecure=40	hash=2721009034713635620
+E2E	Q412 d+1	1	S	discharges=25	distinct=25	main=12	free=15	extensions=12	anf=0
+GOLD	Q412 d+1	1	probes=100	secure=100	coup=132	safe=801	anf=12	unionSecure=10	hash=5523212288679523183
+E2E	Q4293 d+1	1	S	discharges=31	distinct=31	main=15	free=20	extensions=15	anf=0
+GOLD	Q4293 d+1	1	probes=100	secure=100	coup=107	safe=731	anf=0	unionSecure=8	hash=4638601975534905953
+E2E	Q4294 d+1	1	S	discharges=23	distinct=23	main=11	free=16	extensions=11	anf=0
+GOLD	Q4294 d+1	1	probes=100	secure=100	coup=83	safe=744	anf=0	unionSecure=26	hash=16165701789413233464
+E2E	Q4299 d+1	1	S	discharges=35	distinct=35	main=17	free=26	extensions=17	anf=0
+GOLD	Q4299 d+1	1	probes=100	secure=100	coup=161	safe=925	anf=24	unionSecure=2	hash=12290018163279676574
+E2E	Q4300 d+1	1	I	discharges=18	distinct=18	main=8	free=24	extensions=8	anf=0
+GOLD	Q4300 d+1	1	probes=100	secure=82	coup=91	safe=720	anf=4	unionSecure=0	hash=6472075696957392614
+GOLD	DOM Keccak χ (4 shares)	3	probes=300	secure=300	coup=652	safe=31197	anf=9	unionSecure=284	hash=10169322526526535788
+GOLD	DOM AND (5 shares)	4	probes=300	secure=300	coup=769	safe=11062	anf=0	unionSecure=140	hash=17227324874535097035
+GOLD	ISW AND (5 shares)	4	probes=300	secure=300	coup=717	safe=11366	anf=0	unionSecure=165	hash=15749293822068749598
+GOLD	TI Fides AB1 (4 shares)	1	probes=300	secure=300	coup=613	safe=49400	anf=0	unionSecure=147	hash=16242281269580962994

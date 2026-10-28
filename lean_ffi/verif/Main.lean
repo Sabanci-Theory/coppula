@@ -1035,13 +1035,250 @@ def runScaling : IO Unit := do
       without closure: 842942 ms  | discharges 9298  certs 4633
 -/
 
+open Std (HashMap)
+
+/-! ## Engine benchmark and golden test (`lake exe verif bench` / `golden`)
+
+    Safety net and yardstick for the engine-speed work (`.ai/ENGINE_SPEED_PLAN.md`).
+
+    * `golden` — differential test.  On a fixed, seeded sample of probe sets per
+      gadget it records the complete engine output: the verdict of the complete
+      loop, its coupling, the coupling extension over **all** wires, and the
+      tiered verdict-only path on the probe and on a larger "union-sized" set.
+      Each gadget prints one aggregate line (counts + a hash of every per-probe
+      record), and every suite entry also its end-to-end `checkDProbing` result.
+      Expressions are printed in a canonical, NodeId-independent form, so the
+      record survives changes to the DAG representation and allocation order.
+      An engine change is accepted only if the output equals the baseline in
+      `results/engine-golden_baseline.txt` (`golden check <file>`).
+      `golden full <name>` prints the per-probe records of one gadget, for
+      locating a mismatch.
+    * `bench` — timing.  End-to-end `checkDProbing` on the suite (best of 3), and
+      on the large gadgets a per-call profile on seeded random probe sets: engine
+      µs/call, extension µs per secure call, DAG growth, early vs late call cost. -/
+
+/-- The 40-entry `compare` list plus `domAND 3` at order 3. -/
+def benchSuite : List (String × GlobalDAG × Nat) := [
+  ("ISW AND (2 shares)", iswAND 2, 1), ("ISW AND (3 shares)", iswAND 3, 2),
+  ("ISW AND (4 shares)", iswAND 4, 3), ("ISW AND (5 shares)", iswAND 5, 4),
+  ("DOM AND (2 shares)", domAND 2, 1), ("DOM AND (2 shares) o2", domAND 2, 2),
+  ("DOM AND (3 shares)", domAND 3, 2), ("DOM AND (3 shares) o3", domAND 3, 3),
+  ("DOM AND (4 shares)", domAND 4, 3),
+  ("Trichina AND", trichinaAND, 1), ("Trichina AND (bad assoc)", trichinaANDBad, 1),
+  ("TI AND (3 shares)", tiAND, 1), ("TI AND (3 shares) o2", tiAND, 2),
+  ("Additive refresh (3 shares)", refreshAdd 3, 2), ("Additive refresh (4 shares)", refreshAdd 4, 3),
+  ("ISW refresh (3 shares)", refreshISW 3, 2), ("ISW refresh (4 shares)", refreshISW 4, 3),
+  ("DOM Keccak χ (2 shares)", domKeccakChi 2, 1), ("DOM Keccak χ (3 shares)", domKeccakChi 3, 2),
+  ("TI Keccak χ (3 shares)", tiKeccakChi, 1), ("TI Keccak χ (3 shares) o2", tiKeccakChi, 2),
+  ("Q⁴₁₂ (2-share direct)", q_12, 1), ("Q⁴₁₂ TI (3 shares)", q12TI, 1),
+  ("TI Fides AB1 (4 shares)", tiFidesAB1, 1),
+  ("x+yz TI direct (3 shares)", tiXplusYZ3, 1), ("x+yz TI with CT (3 shares)", tiXplusYZ3ct, 1),
+  ("x+yz TI (4 shares)", tiXplusYZ4, 2), ("x+yz TI (4 shares) o3", tiXplusYZ4, 3),
+  ("x+yz+xyz TI (4 shares)", tiCubic4, 1),
+  ("xy TI virtual variable", tiMultVirtual, 1), ("xy TI virtual share", tiMultVirtualShare, 1),
+  ("xy TI 4to3 shares", tiMult43, 1),
+  ("Q31 d+1", q31d1, 1), ("Q32 d+1", q32d1, 1), ("Q33 d+1", q33d1, 1), ("Q44 d+1", q44d1, 1),
+  ("Q412 d+1", q412d1, 1), ("Q4293 d+1", q4293d1, 1), ("Q4294 d+1", q4294d1, 1),
+  ("Q4299 d+1", q4299d1, 1), ("Q4300 d+1", q4300d1, 1)]
+
+/-- Gadgets too large for the split search to finish quickly; profiled per call only. -/
+def benchLarge : List (String × GlobalDAG × Nat) := [
+  ("DOM Keccak χ (4 shares)", domKeccakChi 4, 3), ("DOM AND (5 shares)", domAND 5, 4),
+  ("ISW AND (5 shares)", iswAND 5, 4), ("TI Fides AB1 (4 shares)", tiFidesAB1, 1)]
+
+/-- Wall-clock of `f ()` in nanoseconds. -/
+def timeNs {α} (f : Unit → α) : IO (α × Nat) := do
+  let t0 ← IO.monoNanosNow
+  let r ← IO.lazyPure f
+  let t1 ← IO.monoNanosNow
+  return (r, t1 - t0)
+
+/-- Seeded sampler: `k` distinct indices below `n` (requires `k ≤ n`). -/
+def sampleIdx (n k : Nat) (st : Nat) : Array Nat × Nat := Id.run do
+  let mut st := st
+  let mut idx : Array Nat := #[]
+  while idx.size < k do
+    st := (st * 6364136223846793005 + 1442695040888963407) % 18446744073709551616
+    let i := (st / 4294967296) % n
+    if !idx.contains i then idx := idx.push i
+  return (idx.qsort (· < ·), st)
+
+/-- NodeId-independent rendering: leaves by name, XOR/AND children sorted by
+    their own rendering. -/
+partial def canonStr (dag : DAG) (memo : HashMap NodeId String) (n : NodeId)
+    : HashMap NodeId String × String :=
+  match memo[n]? with
+  | some s => (memo, s)
+  | none =>
+    let (memo, s) := match dag.kind? n with
+      | some (NodeKind.constVal b) => (memo, if b then "1" else "0")
+      | some (NodeKind.leaf (VarType.Secret x)) => (memo, s!"s:{x}")
+      | some (NodeKind.leaf (VarType.Random x)) => (memo, s!"r:{x}")
+      | some (NodeKind.leaf (VarType.Public x)) => (memo, s!"p:{x}")
+      | some (NodeKind.xorNode ch) | some (NodeKind.andNode ch) =>
+        let op := match dag.kind? n with | some (NodeKind.xorNode _) => "+" | _ => "*"
+        let (memo, parts) := ch.foldl (fun (acc : HashMap NodeId String × Array String) c =>
+          let (m, s) := canonStr dag acc.1 c
+          (m, acc.2.push s)) (memo, #[])
+        (memo, "(" ++ op ++ " " ++ String.intercalate " " (parts.qsort (· < ·)).toList ++ ")")
+      | none => (memo, "?")
+    (memo.insert n s, s)
+
+def joinSorted (xs : Array String) : String := String.intercalate "," (xs.qsort (· < ·)).toList
+
+structure GoldAgg where
+  probes  : Nat := 0
+  secure  : Nat := 0
+  coup    : Nat := 0
+  safe    : Nat := 0
+  anf     : Nat := 0
+  unionOk : Nat := 0
+  hash    : UInt64 := 7
+
+/-- Golden records of one gadget: `n` seeded probe sets of size `d`; returns the
+    aggregate and (when `full`) the per-probe records. -/
+def goldenGadget (g0 : GlobalDAG) (d n : Nat) (full : Bool) : GoldAgg × Array String := Id.run do
+  let ws := g0.circuit.wireOrder
+  let cands := candidatesOf g0.wires ws
+  let unionSize := min ws.size (4 * d)
+  let mut g := g0
+  let mut st : Nat := 88172645463325252
+  let mut agg : GoldAgg := {}
+  let mut lines : Array String := #[]
+  for _ in [0:n] do
+    let (idx, st1) := sampleIdx ws.size d st
+    let (uidx, st2) := sampleIdx ws.size unionSize st1
+    st := st2
+    let names := idx.map (ws[·]!)
+    let ids := names.map (fun w => g.wires[w]!)
+    let (g1, sec, coupling) := checkProbeCompleteT g ids
+    g := g1
+    let mut memo : HashMap NodeId String := {}
+    let mut coupStr : Array String := #[]
+    for (r, t) in coupling do
+      let (m1, rs) := canonStr g.dag memo r
+      let (m2, ts) := canonStr g.dag m1 t
+      memo := m2
+      coupStr := coupStr.push s!"{rs}<-{ts}"
+    let mut safeStr := "-"
+    if sec then
+      let (g2, safe, anf) := couplingExtend g coupling names cands
+      g := g2
+      safeStr := joinSorted safe
+      agg := { agg with secure := agg.secure + 1, coup := agg.coup + coupling.size,
+                        safe := agg.safe + safe.size, anf := agg.anf + anf }
+    let (g3, tiered) := checkProbeRoots g ids
+    g := g3
+    let uids := uidx.map (fun i => g.wires[ws[i]!]!)
+    let (g4, uSec) := checkProbeRoots g uids
+    g := g4
+    if uSec then agg := { agg with unionOk := agg.unionOk + 1 }
+    let line := s!"{joinSorted names}|{sec}|{String.intercalate ";" coupStr.toList}|{safeStr}|{tiered}|{uSec}"
+    agg := { agg with probes := agg.probes + 1, hash := mixHash agg.hash (hash line) }
+    if full then lines := lines.push line
+  return (agg, lines)
+
+def goldenLines : IO (Array String) := do
+  let mut out : Array String := #[]
+  for (name, g, d) in benchSuite do
+    let (_, _, res, st) := checkDProbing g d
+    out := out.push s!"E2E\t{name}\t{d}\t{if res.isSecure then "S" else "I"}\tdischarges={st.totalDischarges}\tdistinct={st.verdictCache.size}\tmain={st.successMain}\tfree={st.freeWiresSum}\textensions={st.extensionWitnesses.size}\tanf={st.anfFallbacks}"
+    let (a, _) := goldenGadget g d 100 false
+    out := out.push s!"GOLD\t{name}\t{d}\tprobes={a.probes}\tsecure={a.secure}\tcoup={a.coup}\tsafe={a.safe}\tanf={a.anf}\tunionSecure={a.unionOk}\thash={a.hash}"
+  for (name, g, d) in benchLarge do
+    let (a, _) := goldenGadget g d 300 false
+    out := out.push s!"GOLD\t{name}\t{d}\tprobes={a.probes}\tsecure={a.secure}\tcoup={a.coup}\tsafe={a.safe}\tanf={a.anf}\tunionSecure={a.unionOk}\thash={a.hash}"
+  return out
+
+def runGolden (args : List String) : IO UInt32 := do
+  match args with
+  | ["full", name] =>
+    match (benchSuite ++ benchLarge).find? (·.1 == name) with
+    | none => IO.eprintln s!"unknown gadget '{name}'"; return 2
+    | some (_, g, d) =>
+      let n := if (benchLarge.any (·.1 == name)) && !(benchSuite.any (·.1 == name)) then 300 else 100
+      let (_, lines) := goldenGadget g d n true
+      for l in lines do IO.println l
+      return 0
+  | ["check", file] =>
+    let expected := (← IO.FS.lines file).filter (fun l => l.startsWith "E2E" || l.startsWith "GOLD")
+    let got ← goldenLines
+    let mut bad := 0
+    for i in [0:max expected.size got.size] do
+      let e := expected[i]?.getD "<missing>"
+      let o := got[i]?.getD "<missing>"
+      if e != o then
+        bad := bad + 1
+        IO.println s!"MISMATCH\n  expected: {e}\n  got:      {o}"
+    IO.println (if bad == 0 then s!"golden: OK ({got.size} lines identical)" else s!"golden: {bad} MISMATCHES")
+    return (if bad == 0 then 0 else 1)
+  | _ =>
+    for l in ← goldenLines do IO.println l
+    return 0
+
+/-- Per-call profile on `n` seeded random probe sets (the engine + extension work
+    a search would do per discharge, without the search). -/
+def profileCalls (name : String) (g0 : GlobalDAG) (d n : Nat) : IO Unit := do
+  let ws := g0.circuit.wireOrder
+  let cands := candidatesOf g0.wires ws
+  let mut g := g0
+  let mut st : Nat := 88172645463325252
+  let mut tE := 0
+  let mut tX := 0
+  let mut tEarly := 0
+  let mut tLate := 0
+  let mut nSec := 0
+  let n0 := g.dag.nextId
+  for i in [0:n] do
+    let (idx, st1) := sampleIdx ws.size d st
+    st := st1
+    let names := idx.map (ws[·]!)
+    let ids := names.map (fun w => g.wires[w]!)
+    let gin := g
+    let ((g1, sec, coupling), te) ← timeNs (fun _ => checkProbeCompleteT gin ids)
+    g := g1
+    tE := tE + te
+    let mut tx := 0
+    if sec then
+      nSec := nSec + 1
+      let gin := g
+      let ((g2, _, _), t) ← timeNs (fun _ => couplingExtend gin coupling names cands)
+      g := g2
+      tx := t
+      tX := tX + t
+    if i < 100 then tEarly := tEarly + te + tx
+    if i + 100 ≥ n then tLate := tLate + te + tx
+  let perSec := if nSec == 0 then 0 else tX / 1000 / nSec
+  IO.println s!"CALL\t{name}\t{d}\tcalls={n}\tsecure={nSec}\tengine_us={tE / 1000 / n}\textend_us={perSec}\tdag={n0}->{g.dag.nextId}\tfirst100_us={tEarly / 1000 / 100}\tlast100_us={tLate / 1000 / 100}"
+  (← IO.getStdout).flush
+
+def runBench : IO Unit := do
+  IO.println "=== end-to-end checkDProbing (best of 3) ==="
+  let mut total := 0
+  for (name, g, d) in benchSuite do
+    let mut best := 0
+    let mut line := ""
+    for k in [0:3] do
+      let ((_, _, res, st), t) ← timeNs (fun _ => checkDProbing g d)
+      if k == 0 || t < best then best := t
+      line := s!"{if res.isSecure then "S" else "I"}\tdischarges={st.totalDischarges}"
+    total := total + best
+    IO.println s!"E2E\t{name}\t{d}\t{line}\tms={best / 1000000}.{(best / 100000) % 10}"
+    (← IO.getStdout).flush
+  IO.println s!"E2E-TOTAL\tms={total / 1000000}"
+  IO.println "=== per-call profile (seeded random probe sets) ==="
+  for (name, g, d) in benchLarge do
+    profileCalls name g d (if d == 1 then 300 else 2000)
+
 end verif
 
-def main (args : List String) : IO Unit :=
+def main (args : List String) : IO UInt32 :=
   match args with
-  | ["nofactor"] => verif.runNoFactorAblation
-  | ["scaling"]  => verif.runScaling
-  | ["compare"]  => verif.runCompare
-  | _            => verif.runAblation
+  | ["nofactor"] => do verif.runNoFactorAblation; return 0
+  | ["scaling"]  => do verif.runScaling; return 0
+  | ["compare"]  => do verif.runCompare; return 0
+  | ["bench"]    => do verif.runBench; return 0
+  | "golden" :: rest => verif.runGolden rest
+  | _            => do verif.runAblation; return 0
 
 -- #eval main
