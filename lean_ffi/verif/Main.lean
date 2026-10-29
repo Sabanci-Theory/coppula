@@ -1178,6 +1178,31 @@ def goldenGadget (g0 : GlobalDAG) (d n : Nat) (full : Bool) : GoldAgg × Array S
     if full then lines := lines.push line
   return (agg, lines)
 
+/-- One golden line for the cell search on `g` at order `d`. -/
+def cellLine (name : String) (g : GlobalDAG) (d : Nat) : String :=
+  let (_, s, res) := checkDProbingCells g d
+  let audit := if !res.isSecure then "-" else
+    match coverageAudit s.store g.circuit.wireOrder.size d with
+    | some (n, 0) => s!"ok/{n}"
+    | some (n, m) => s!"UNCOVERED {m}/{n}"
+    | none => "skipped"
+  s!"CELL\t{name}\t{d}\t{if res.isSecure then "S" else "I"}\tengine={s.cnt.engine}\tcells={s.cnt.cells}\tcovers={s.cnt.covers}\tskips={s.cnt.skips}\tsafeSets={s.store.sets.size}\taudit={audit}"
+
+/-- One golden line for the symmetric cell search (`mode`), with both audits:
+    the root covers every orbit (`rootCheck`), and every probe set of the root is
+    covered by a stored set (`coverageAuditCells`). -/
+def symLine (name : String) (g : GlobalDAG) (d : Nat) : String :=
+  let n := g.circuit.wireOrder.size
+  let (_, s, res, plan?) := checkDProbingSym g d
+  let fmt (r : Option (Nat × Nat)) : String := match r with
+    | some (k, 0) => s!"ok/{k}" | some (k, m) => s!"FAIL {m}/{k}" | none => "skipped"
+  match plan? with
+  | none => s!"SYM\t{name}\t{d}\t{if res.isSecure then "S" else "I"}\tsymmetry=off\tengine={s.cnt.engine}\tcells={s.cnt.cells}"
+  | some p =>
+    let rc := fmt (rootCheck n d p.rootTables p.roots)
+    let cov := if !res.isSecure then "-" else fmt (coverageAuditCells #[s.store] p.roots)
+    s!"SYM\t{name}\t{d}\t{if res.isSecure then "S" else "I"}\tgroups={p.label}\tautomorphisms={p.sym.size}\troot={p.rootSize}/{p.totalSize} in {p.roots.size} cells\tengine={s.cnt.engine}\tcells={s.cnt.cells}\tcovers={s.cnt.covers}\tdeep={s.cnt.deep}\tskips={s.cnt.skips}\trootCheck={rc}\tcoverage={cov}"
+
 def goldenLines : IO (Array String) := do
   let mut out : Array String := #[]
   for (name, g, d) in benchSuite do
@@ -1188,6 +1213,12 @@ def goldenLines : IO (Array String) := do
   for (name, g, d) in benchLarge do
     let (a, _) := goldenGadget g d 300 false
     out := out.push s!"GOLD\t{name}\t{d}\tprobes={a.probes}\tsecure={a.secure}\tcoup={a.coup}\tsafe={a.safe}\tanf={a.anf}\tunionSecure={a.unionOk}\thash={a.hash}"
+  -- cell search (`CellSearch.lean`): verdict, counters, and the brute-force coverage audit
+  for (name, g, d) in benchSuite ++ benchLarge do
+    out := out.push (cellLine name g d)
+  -- symmetric cell search, symmetry forced on (exercises the audits everywhere)
+  for (name, g, d) in benchSuite ++ benchLarge do
+    out := out.push (symLine name g d)
   return out
 
 def runGolden (args : List String) : IO UInt32 := do
@@ -1200,8 +1231,36 @@ def runGolden (args : List String) : IO UInt32 := do
       let (_, lines) := goldenGadget g d n true
       for l in lines do IO.println l
       return 0
+  | ["cell", name] =>
+    match (benchSuite ++ benchLarge).find? (·.1 == name) with
+    | none => IO.eprintln s!"unknown gadget '{name}'"; return 2
+    | some (_, g, d) => IO.println (cellLine name g d); return 0
+  | ["contract"] =>
+    -- the one-pass `contractAssoc` against iterating `contractAssocStep` (the definition)
+    let mut bad := 0
+    for (name, g, _) in benchSuite ++ benchLarge do
+      let c := g.circuit
+      let (fast, _) := contractAssoc c
+      let slow := Id.run do
+        let mut cur := c
+        for _ in [0:c.wireOrder.size + 1] do
+          match contractAssocStep cur with
+          | (c', true) => cur := c'
+          | (_, false) => break
+        return cur
+      let render (x : Circuit) : String := String.intercalate "\n"
+        ((x.inputOrder ++ x.wireOrder).toList.map (fun w => w ++ " = " ++ Circuit.ppWireDef x.wireDefs[w]!))
+      if render fast != render slow then
+        bad := bad + 1
+        IO.println s!"CONTRACT MISMATCH {name}"
+    IO.println s!"contract: {if bad == 0 then "OK" else toString bad ++ " MISMATCHES"}"
+    return (if bad == 0 then 0 else 1)
+  | ["sym", name] =>
+    match (benchSuite ++ benchLarge).find? (·.1 == name) with
+    | none => IO.eprintln s!"unknown gadget '{name}'"; return 2
+    | some (_, g, d) => IO.println (symLine name g d); return 0
   | ["check", file] =>
-    let expected := (← IO.FS.lines file).filter (fun l => l.startsWith "E2E" || l.startsWith "GOLD")
+    let expected := (← IO.FS.lines file).filter (fun l => l.startsWith "E2E" || l.startsWith "GOLD" || l.startsWith "CELL" || l.startsWith "SYM")
     let got ← goldenLines
     let mut bad := 0
     for i in [0:max expected.size got.size] do
@@ -1252,6 +1311,90 @@ def profileCalls (name : String) (g0 : GlobalDAG) (d n : Nat) : IO Unit := do
   IO.println s!"CALL\t{name}\t{d}\tcalls={n}\tsecure={nSec}\tengine_us={tE / 1000 / n}\textend_us={perSec}\tdag={n0}->{g.dag.nextId}\tfirst100_us={tEarly / 1000 / 100}\tlast100_us={tLate / 1000 / 100}"
   (← IO.getStdout).flush
 
+/-- `bench cells <gadget>`: the cell search on one gadget, best of 3. -/
+def benchCellsOne (name : String) : IO Unit := do
+  match (benchSuite ++ benchLarge).find? (·.1 == name) with
+  | none => IO.eprintln s!"unknown gadget '{name}'"
+  | some (_, g, d) =>
+    let mut best := 0
+    for k in [0:3] do
+      let ((_, s, res), t) ← timeNs (fun _ => checkDProbingCells g d)
+      if k == 0 || t < best then best := t
+      if k == 2 then
+        IO.println s!"CELLS\t{name}\t{d}\t{if res.isSecure then "S" else "I"}\tengine={s.cnt.engine}\tcells={s.cnt.cells}\tms={best / 1000000}.{(best / 100000) % 10}"
+
+/-- `bench sym <gadget>`: the symmetric cell search (symmetry on), best of 3,
+    setup included, and the setup alone. -/
+def benchSymOne (name : String) : IO Unit := do
+  match (benchSuite ++ benchLarge).find? (·.1 == name) with
+  | none => IO.eprintln s!"unknown gadget '{name}'"
+  | some (_, g, d) =>
+    let mut best := 0
+    let mut bestPlan := 0
+    for k in [0:3] do
+      let (p, tp) ← timeNs (fun _ => planSymmetry g d)
+      let ((_, s, res, _), t) ← timeNs (fun _ => checkDProbingSym g d)
+      if k == 0 || t < best then best := t
+      if k == 0 || tp < bestPlan then bestPlan := tp
+      if k == 2 then
+        IO.println s!"SYM\t{name}\t{d}\t{if res.isSecure then "S" else "I"}\tgroups={p.label}\troot={p.rootSize}/{p.totalSize}\tengine={s.cnt.engine}\tcells={s.cnt.cells}\tdeep={s.cnt.deep}\tms={best / 1000000}.{(best / 100000) % 10}\tsetup_ms={bestPlan / 1000000}.{(bestPlan / 100000) % 10}"
+
+/-- `bench setup <gadget>`: where the symmetry setup time goes. -/
+def benchSetup (name : String) : IO Unit := do
+  match (benchSuite ++ benchLarge).find? (·.1 == name) with
+  | none => IO.eprintln s!"unknown gadget '{name}'"
+  | some (_, g, d) =>
+    let ws := g.circuit.wireOrder
+    let (cands, t1) ← timeNs (fun _ => symmetriesOf g 600)
+    let (els, t2) ← timeNs (fun _ => cands.map (fun s => WireTables.of s ws))
+    let ((ri, roots), t3) ← timeNs (fun _ => bestRootGroup els d)
+    let ms (x : Nat) : String := s!"{x / 1000000}.{(x / 100000) % 10}"
+    IO.println s!"SETUP\t{name}\tgroups={String.intercalate "+" (cands.toList.map (fun s => toString s.order))}\tgroupExtraction={ms t1}\twireTables={ms t2}\torbitalRoot={ms t3}\troot={rootProbeCount roots}/{binomial ws.size d}\tri={ri}"
+
+/-- `bench groups <gadget>`: the steps of `symmetriesOf`, timed. -/
+def benchGroups (name : String) : IO Unit := do
+  match (benchSuite ++ benchLarge).find? (·.1 == name) with
+  | none => IO.eprintln s!"unknown gadget '{name}'"
+  | some (_, g, _) =>
+    let c0 := g.circuit
+    let ((rc, _), t1) ← timeNs (fun _ => contractAssoc c0)
+    let ((gl, rl), t2) ← timeNs (fun _ => automorphisms rc)
+    let ((leafG, _), t3) ← timeNs (fun _ => closedGroup (rl.gens.map (leafMapOf gl)) 600)
+    let (chk, t4) ← timeNs (fun _ => shareChecks c0)
+    let (chk2, t5) ← timeNs (fun _ => shareChecks rc)
+    let bundles := if chk2.ok then chk2.bundles else chk.bundles
+    let (sg, t6) ← timeNs (fun _ => buildShareGraph rc bundles)
+    let ((_, _, gens), t7) ← timeNs (fun _ => groupOf sg 200000 sg.kind)
+    let ((shG, _), t8) ← timeNs (fun _ => closedGroup (gens.map (atomicLeafMap sg)) 600)
+    let (ad, t9) ← timeNs (fun _ => buildAtomicDAG c0)
+    let ms (x : Nat) : String := s!"{x / 1000000}.{(x / 100000) % 10}"
+    IO.println s!"GROUPS\t{name}\tleaf={leafG.size}\tshare={shG.size}\tcontract={ms t1}\tautomorphisms={ms t2}\tcloseLeaf={ms t3}\tshareChecks={ms t4}+{ms t5}\tshareGraph={ms t6}\tgroupOf={ms t7}\tcloseShare={ms t8}\tatomicDAG={ms t9}\t(atomic nodes {ad.dag.nextId})"
+
+/-- `bench plainroot <gadget>`: symmetric lookups with the plain root (experiment). -/
+def benchPlainRoot (name : String) : IO Unit := do
+  match (benchSuite ++ benchLarge).find? (·.1 == name) with
+  | none => IO.eprintln s!"unknown gadget '{name}'"
+  | some (_, g, d) =>
+    let mut best := 0
+    for k in [0:3] do
+      let ((_, s, _, _), t) ← timeNs (fun _ => checkDProbingSym g d (orbitalRoot := false))
+      if k == 0 || t < best then best := t
+      if k == 2 then IO.println s!"PLAINROOT\t{name}\tengine={s.cnt.engine}\tcells={s.cnt.cells}\tdeep={s.cnt.deep}\tms={best / 1000000}.{(best / 100000) % 10}"
+
+/-- `bench cap <gadget> <cap>`: the symmetric search with groups capped at `cap`. -/
+def benchCap (name : String) (cap : Nat) : IO Unit := do
+  match (benchSuite ++ benchLarge).find? (·.1 == name) with
+  | none => IO.eprintln s!"unknown gadget '{name}'"
+  | some (_, g, d) =>
+    let mut best := 0
+    let mut bestP := 0
+    for k in [0:3] do
+      let (p, tp) ← timeNs (fun _ => planSymmetry g d cap)
+      let ((_, s, _, _), t) ← timeNs (fun _ => checkDProbingSym g d (groupCap := cap))
+      if k == 0 || t < best then best := t
+      if k == 0 || tp < bestP then bestP := tp
+      if k == 2 then IO.println s!"CAP {cap}\t{name}\tgroups={p.label}\tauts={p.sym.size}\troot={p.rootSize}/{p.totalSize}\tengine={s.cnt.engine}\tcells={s.cnt.cells}\tms={best / 1000000}.{(best / 100000) % 10}\tsetup={bestP / 1000000}.{(bestP / 100000) % 10}"
+
 def runBench : IO Unit := do
   IO.println "=== end-to-end checkDProbing (best of 3) ==="
   let mut total := 0
@@ -1266,6 +1409,32 @@ def runBench : IO Unit := do
     IO.println s!"E2E\t{name}\t{d}\t{line}\tms={best / 1000000}.{(best / 100000) % 10}"
     (← IO.getStdout).flush
   IO.println s!"E2E-TOTAL\tms={total / 1000000}"
+  IO.println "=== cell search, no symmetry (best of 3) ==="
+  let mut totalC := 0
+  for (name, g, d) in benchSuite ++ benchLarge do
+    let mut best := 0
+    let mut line := ""
+    for k in [0:3] do
+      let ((_, s, res), t) ← timeNs (fun _ => checkDProbingCells g d)
+      if k == 0 || t < best then best := t
+      line := s!"{if res.isSecure then "S" else "I"}\tengine={s.cnt.engine}\tcells={s.cnt.cells}"
+    if benchSuite.any (·.1 == name) then totalC := totalC + best
+    IO.println s!"CELLS\t{name}\t{d}\t{line}\tms={best / 1000000}.{(best / 100000) % 10}"
+    (← IO.getStdout).flush
+  IO.println s!"CELLS-TOTAL(suite)\tms={totalC / 1000000}"
+  IO.println "=== symmetric cell search, setup included (best of 3) ==="
+  let mut totalS := 0
+  for (name, g, d) in benchSuite ++ benchLarge do
+    let mut best := 0
+    let mut line := ""
+    for k in [0:3] do
+      let ((_, s, res, _), t) ← timeNs (fun _ => checkDProbingSym g d)
+      if k == 0 || t < best then best := t
+      line := s!"{if res.isSecure then "S" else "I"}\tengine={s.cnt.engine}\tcells={s.cnt.cells}\tdeep={s.cnt.deep}"
+    if benchSuite.any (·.1 == name) then totalS := totalS + best
+    IO.println s!"SYM\t{name}\t{d}\t{line}\tms={best / 1000000}.{(best / 100000) % 10}"
+    (← IO.getStdout).flush
+  IO.println s!"SYM-TOTAL(suite)\tms={totalS / 1000000}"
   IO.println "=== per-call profile (seeded random probe sets) ==="
   for (name, g, d) in benchLarge do
     profileCalls name g d (if d == 1 then 300 else 2000)
@@ -1278,7 +1447,21 @@ def main (args : List String) : IO UInt32 :=
   | ["scaling"]  => do verif.runScaling; return 0
   | ["compare"]  => do verif.runCompare; return 0
   | ["bench"]    => do verif.runBench; return 0
+  | ["bench", "cells", name] => do verif.benchCellsOne name; return 0
+  | ["bench", "sym", name] => do verif.benchSymOne name; return 0
+  | ["bench", "setup", name] => do verif.benchSetup name; return 0
+  | ["bench", "plainroot", name] => do verif.benchPlainRoot name; return 0
+  | ["bench", "cap", name, c] => do verif.benchCap name c.toNat!; return 0
+  | ["bench", "groups", name] => do verif.benchGroups name; return 0
   | "golden" :: rest => verif.runGolden rest
+  | ["check", name] =>
+    -- one gadget, cell search with the automatic symmetry policy
+    match (verif.benchSuite ++ verif.benchLarge).find? (·.1 == name) with
+    | none => do IO.eprintln s!"unknown gadget '{name}'"; return 2
+    | some (_, g, d) => do
+      let (_, s, res, plan?) := verif.checkDProbingSym g d
+      IO.println s!"{name} @ order {d}: {if res.isSecure then "SECURE" else "INSECURE"}  (engine calls {s.cnt.engine}, cells {s.cnt.cells}, symmetry {if plan?.isSome then "on" else "off"})"
+      return 0
   | _            => do verif.runAblation; return 0
 
 -- #eval main

@@ -473,17 +473,48 @@ def contractAssocStep (c : Circuit) : Circuit × Bool := Id.run do
       wireDefs  := (c.wireDefs.erase nm).insert pn newDef }, true)
 
 /-- Contract association chains to a fixed point.  Returns the relaxed circuit
-    and the names of the wires that were absorbed. -/
-partial def contractAssoc (c : Circuit) : Circuit × Array String :=
-  let before := c.wireOrder
-  let rec go (c : Circuit) (fuel : Nat) : Circuit :=
-    if fuel == 0 then c
-    else match contractAssocStep c with
-      | (c', true)  => go c' (fuel - 1)
-      | (c', false) => c'
-  let c' := go c (c.wireOrder.size + 1)
-  let kept : HashMap String Unit := c'.wireOrder.foldl (fun m w => m.insert w ()) {}
-  (c', before.filter (fun w => !kept.contains w))
+    and the names of the wires that were absorbed.
+
+    Same result as iterating `contractAssocStep`, in one pass.  Which wires get
+    absorbed is fixed by the original circuit: a body wire `u` with one use
+    whose user has `u`'s operator (absorbing changes neither use counts nor
+    operators — `u`'s inputs move to its user, whose operator is the same).
+    `contractAssocStep` absorbs the first such wire in `wireOrder` into its
+    current user; doing the same in `wireOrder` order, with the current user
+    found through the absorbed-into map, reproduces it step for step without
+    re-scanning the circuit after every absorption. -/
+partial def contractAssoc (c : Circuit) : Circuit × Array String := Id.run do
+  let uses := useCounts c
+  -- the original unique user of every single-use wire (first in scan order, as in the step)
+  let mut user : HashMap String String := {}
+  for pn in c.inputOrder ++ c.wireOrder do
+    for inp in (c.wireDefs[pn]!).inputs do
+      match inp with
+      | WireInput.wire w => if (uses[w]?).getD 0 == 1 && !user.contains w then user := user.insert w pn
+      | _ => pure ()
+  let mut defs := c.wireDefs
+  let mut into : HashMap String String := {}      -- absorbed wire ↦ the wire it went into
+  let mut absorbed : Array String := #[]
+  for u in c.wireOrder do
+    match user[u]? with
+    | none => pure ()
+    | some p0 =>
+      let du := c.wireDefs[u]!
+      if (c.wireDefs[p0]!).isXor != du.isXor then continue
+      -- the current holder of `u`: follow the absorbed-into chain
+      let mut p := p0
+      let mut fuel := c.wireOrder.size
+      while into.contains p && fuel > 0 do
+        p := into[p]!
+        fuel := fuel - 1
+      let pd := defs[p]!
+      let cur := defs[u]!
+      let newInputs := (pd.inputs.filter (fun i => i != WireInput.wire u)) ++ cur.inputs
+      defs := (defs.erase u).insert p (if pd.isXor then WireDef.xor newInputs else WireDef.and newInputs)
+      into := into.insert u p
+      absorbed := absorbed.push u
+  let gone : HashMap String Unit := absorbed.foldl (fun m w => m.insert w ()) {}
+  return ({ c with wireOrder := c.wireOrder.filter (fun w => !gone.contains w), wireDefs := defs }, absorbed)
 
 -- ============================================================
 -- Stable domain (memo Definition 4) — the "dispose" half

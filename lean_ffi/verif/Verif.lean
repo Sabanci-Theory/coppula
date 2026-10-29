@@ -5,3 +5,5 @@ import Verif.Circuit
 import Verif.Engine
 import Verif.Coupling
 import Verif.ProbeClosure
+import Verif.CellSearch
+import Verif.Symmetry
