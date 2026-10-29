@@ -1395,6 +1395,56 @@ def benchCap (name : String) (cap : Nat) : IO Unit := do
       if k == 0 || tp < bestP then bestP := tp
       if k == 2 then IO.println s!"CAP {cap}\t{name}\tgroups={p.label}\tauts={p.sym.size}\troot={p.rootSize}/{p.totalSize}\tengine={s.cnt.engine}\tcells={s.cnt.cells}\tms={best / 1000000}.{(best / 100000) % 10}\tsetup={bestP / 1000000}.{(bestP / 100000) % 10}"
 
+/-- `trace <gadget>`: the symmetric cell search on one gadget, step by step —
+    wires, groups, root cells, and every cell visit with its outcome. -/
+def runTrace (name : String) : IO Unit := do
+  match (benchSuite ++ benchLarge).find? (·.1 == name) with
+  | none => IO.eprintln s!"unknown gadget '{name}'"
+  | some (_, g, d) =>
+    let ws := g.circuit.wireOrder
+    let n := ws.size
+    let nm (w : Nat) : String := ws[w]!
+    let showCell (c : Cell) : String :=
+      String.intercalate " × " (c.toList.map (fun (k, xs) => s!"{k} of " ++ "{" ++ String.intercalate "," (xs.toList.map nm) ++ "}"))
+    let showSet (xs : Array Nat) : String := "{" ++ String.intercalate "," (xs.toList.map nm) ++ "}"
+    IO.println s!"GADGET {name} at order {d}: {n} wires"
+    for w in g.circuit.inputOrder ++ ws do
+      IO.println s!"  {Circuit.ppLine g.circuit (if g.circuit.inputOrder.contains w then "[in] " else "") w}"
+    let p := planSymmetry g d
+    IO.println s!"GROUPS {p.label}; automorphisms used for lookups: {p.sym.size}"
+    for (f, _) in p.sym.extract 0 (min 6 p.sym.size) do
+      let moved := (Array.range n).filter (fun w => f[w]! < n && f[w]! != w)
+      let inval := (Array.range n).filter (fun w => f[w]! >= n)
+      IO.println (s!"  e.g. " ++ String.intercalate " " (moved.toList.map (fun w => s!"{nm w}→{nm f[w]!}")) ++ (if inval.isEmpty then "" else s!"   (not valid on {showSet inval})"))
+    IO.println s!"ROOT {p.rootSize} of {p.totalSize} probe sets in {p.roots.size} cells"
+    for c in p.roots do IO.println s!"  [{probeCount c}] {showCell c}"
+    let env := { CellEnv.of g (identityLook n) with sym := p.sym }
+    let mut s : CellState := { g, store := SafeStore.empty n 1 }
+    let mut stack : Array Cell := p.roots.reverse
+    let mut step := 0
+    while !stack.isEmpty do
+      let cell := stack.back!
+      stack := stack.pop
+      let before := s.cnt
+      let nSets := s.store.sets.size
+      let (s2, bad, kids) := visitCell env s cell
+      s := s2
+      if s.cnt.cells == before.cells then continue    -- vacuous cell, not counted
+      step := step + 1
+      let seed := cell.filter (fun (c, _) => c > 0) |>.foldl (fun acc (c, xs) => acc ++ xs.extract 0 c) #[]
+      let what :=
+        if s.cnt.skips > before.skips then "SKIP (whole cell inside a stored safe set)"
+        else if s.cnt.deep > before.deep then s!"SYMMETRY: seed {showSet seed} lies in an automorphic image of a stored set; stored image {showSet s.store.sets[nSets]!}"
+        else if s.cnt.covers > before.covers then s!"COVER: seed {showSet seed} inside a stored safe set"
+        else match bad with
+          | some w => s!"ENGINE on {showSet seed}: NOT certified -> counterexample {w}"
+          | none => s!"ENGINE on {showSet seed}: certified; safe set {showSet s.store.sets[nSets]!} stored"
+      IO.println (s!"STEP {step} cell [{probeCount cell}] {showCell (cell.filter (fun (c, _) => c > 0))}\n    {what}" ++ (if kids.isEmpty then "" else s!"\n    -> {kids.size} child cells"))
+      match bad with
+      | some _ => break
+      | none => stack := stack ++ kids.reverse
+    IO.println s!"DONE engine={s.cnt.engine} cells={s.cnt.cells} covers={s.cnt.covers} (through symmetry {s.cnt.deep}) skips={s.cnt.skips} stored={s.store.sets.size}"
+
 def runBench : IO Unit := do
   IO.println "=== end-to-end checkDProbing (best of 3) ==="
   let mut total := 0
@@ -1447,6 +1497,7 @@ def main (args : List String) : IO UInt32 :=
   | ["scaling"]  => do verif.runScaling; return 0
   | ["compare"]  => do verif.runCompare; return 0
   | ["bench"]    => do verif.runBench; return 0
+  | ["trace", name] => do verif.runTrace name; return 0
   | ["bench", "cells", name] => do verif.benchCellsOne name; return 0
   | ["bench", "sym", name] => do verif.benchSymOne name; return 0
   | ["bench", "setup", name] => do verif.benchSetup name; return 0
