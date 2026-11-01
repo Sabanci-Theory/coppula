@@ -1,0 +1,80 @@
+ABL	suite	sym=true	extendAll=true	union=0	verdicts=SSSSSISISSISISSSSSSSISSSSSSISSSSSSISSSSSI	engine=989	cells=16551	unions=0	unionsOk=0	ms=160.8
+ABL	suite	sym=true	extendAll=true	union=1	verdicts=SSSSSISISSISISSSSSSSISSSSSSISSSSSSISSSSSI	engine=547	cells=18475	unions=3810	unionsOk=3550	ms=1732.0
+ABL	suite	sym=true	extendAll=true	union=2	verdicts=SSSSSISISSISISSSSSSSISSSSSSISSSSSSISSSSSI	engine=356	cells=5583	unions=4472	unionsOk=2822	ms=2267.9
+ABL	suite	sym=true	extendAll=false	union=0	verdicts=SSSSSISISSISISSSSSSSISSSSSSISSSSSSISSSSSI	engine=23316	cells=42412	unions=0	unionsOk=0	ms=1341.9
+ABL	suite	sym=true	extendAll=false	union=1	verdicts=SSSSSISISSISISSSSSSSISSSSSSISSSSSSISSSSSI	engine=2633	cells=16387	unions=7105	unionsOk=4877	ms=2577.3
+ABL	suite	sym=true	extendAll=false	union=2	verdicts=SSSSSISISSISISSSSSSSISSSSSSISSSSSSISSSSSI	engine=2437	cells=10739	unions=9466	unionsOk=5520	ms=3172.2
+ABL	suite	sym=false	extendAll=true	union=0	verdicts=SSSSSISISSISISSSSSSSISSSSSSISSSSSSISSSSSI	engine=1909	cells=14971	unions=0	unionsOk=0	ms=118.4
+ABL	suite	sym=false	extendAll=true	union=1	verdicts=SSSSSISISSISISSSSSSSISSSSSSISSSSSSISSSSSI	engine=1038	cells=15974	unions=5525	unionsOk=4619	ms=1954.2
+ABL	suite	sym=false	extendAll=true	union=2	verdicts=SSSSSISISSISISSSSSSSISSSSSSISSSSSSISSSSSI	engine=950	cells=6184	unions=5426	unionsOk=2844	ms=2673.7
+ABL	suite	sym=false	extendAll=false	union=0	verdicts=SSSSSISISSISISSSSSSSISSSSSSISSSSSSISSSSSI	engine=21558	cells=26327	unions=0	unionsOk=0	ms=792.5
+ABL	suite	sym=false	extendAll=false	union=1	verdicts=SSSSSISISSISISSSSSSSISSSSSSISSSSSSISSSSSI	engine=2789	cells=8366	unions=6411	unionsOk=3706	ms=2989.6
+ABL	suite	sym=false	extendAll=false	union=2	verdicts=SSSSSISISSISISSSSSSSISSSSSSISSSSSSISSSSSI	engine=2769	cells=7103	unions=6520	unionsOk=3465	ms=3108.6
+ABL	DOM Keccak χ (4 shares)	sym=true	extendAll=true	union=0	verdicts=S	engine=576	cells=13373	unions=0	unionsOk=0	ms=127.5
+ABL	DOM Keccak χ (4 shares)	sym=true	extendAll=true	union=1	verdicts=S	engine=373	cells=11198	unions=805	unionsOk=447	ms=1127.9
+ABL	DOM Keccak χ (4 shares)	sym=true	extendAll=true	union=2	verdicts=S	engine=281	cells=6205	unions=6053	unionsOk=1093	ms=10552.3
+ABL	DOM Keccak χ (4 shares)	sym=true	extendAll=false	union=0	verdicts=S	engine=10886	cells=23083	unions=0	unionsOk=0	ms=1196.3
+ABL	DOM Keccak χ (4 shares)	sym=true	extendAll=false	union=1	verdicts=S	engine=3550	cells=12747	unions=4334	unionsOk=847	ms=7657.6
+ABL	DOM Keccak χ (4 shares)	sym=true	extendAll=false	union=2	verdicts=S	engine=3287	cells=9776	unions=9572	unionsOk=1346	ms=17044.8
+ABL	DOM Keccak χ (4 shares)	sym=false	extendAll=true	union=0	verdicts=S	engine=14706	cells=103177	unions=0	unionsOk=0	ms=1819.7
+ABL	DOM Keccak χ (4 shares)	sym=false	extendAll=true	union=1	verdicts=S	engine=7733	cells=91324	unions=15790	unionsOk=8347	ms=12795.3
+ABL	DOM Keccak χ (4 shares)	sym=false	extendAll=true	union=2	verdicts=S	engine=8024	cells=74494	unions=72343	unionsOk=9773	ms=90296.5
+ABL	DOM Keccak χ (4 shares)	sym=false	extendAll=false	union=0	verdicts=S	engine=155542	cells=161005	unions=0	unionsOk=0	ms=15219.8
+ABL	DOM Keccak χ (4 shares)	sym=0	extendAll=0	union=1	TIMEOUT
+ABL	DOM Keccak χ (4 shares)	sym=0	extendAll=0	union=2	TIMEOUT
+ABL	DOM AND (5 shares)	sym=true	extendAll=true	union=0	verdicts=S	engine=243	cells=13715	unions=0	unionsOk=0	ms=79.8
+ABL	DOM AND (5 shares)	sym=true	extendAll=true	union=1	verdicts=S	engine=153	cells=14304	unions=441	unionsOk=397	ms=112.2
+ABL	DOM AND (5 shares)	sym=true	extendAll=true	union=2	verdicts=S	engine=53	cells=5228	unions=4316	unionsOk=2748	ms=910.3
+ABL	DOM AND (5 shares)	sym=true	extendAll=false	union=0	verdicts=S	engine=9545	cells=47863	unions=0	unionsOk=0	ms=1438.3
+ABL	DOM AND (5 shares)	sym=true	extendAll=false	union=1	verdicts=S	engine=609	cells=23525	unions=2165	unionsOk=1868	ms=437.7
+ABL	DOM AND (5 shares)	sym=true	extendAll=false	union=2	verdicts=S	engine=298	cells=6817	unions=5925	unionsOk=3676	ms=1278.6
+ABL	DOM AND (5 shares)	sym=false	extendAll=true	union=0	verdicts=S	engine=843	cells=23160	unions=0	unionsOk=0	ms=108.6
+ABL	DOM AND (5 shares)	sym=false	extendAll=true	union=1	verdicts=S	engine=240	cells=20430	unions=6117	unionsOk=6025	ms=258.6
+ABL	DOM AND (5 shares)	sym=false	extendAll=true	union=2	verdicts=S	engine=122	cells=5818	unions=4473	unionsOk=3489	ms=464.3
+ABL	DOM AND (5 shares)	sym=false	extendAll=false	union=0	verdicts=S	engine=42812	cells=47201	unions=0	unionsOk=0	ms=2234.8
+ABL	DOM AND (5 shares)	sym=false	extendAll=false	union=1	verdicts=S	engine=1497	cells=9517	unions=7122	unionsOk=5683	ms=668.7
+ABL	DOM AND (5 shares)	sym=false	extendAll=false	union=2	verdicts=S	engine=1488	cells=9186	unions=7639	unionsOk=5676	ms=857.3
+ABL	ISW AND (5 shares)	sym=true	extendAll=true	union=0	verdicts=S	engine=485	cells=14117	unions=0	unionsOk=0	ms=63.0
+ABL	ISW AND (5 shares)	sym=true	extendAll=true	union=1	verdicts=S	engine=210	cells=16205	unions=3288	unionsOk=3240	ms=216.8
+ABL	ISW AND (5 shares)	sym=true	extendAll=true	union=2	verdicts=S	engine=64	cells=4133	unions=3303	unionsOk=2399	ms=493.1
+ABL	ISW AND (5 shares)	sym=true	extendAll=false	union=0	verdicts=S	engine=21214	cells=38708	unions=0	unionsOk=0	ms=1302.0
+ABL	ISW AND (5 shares)	sym=true	extendAll=false	union=1	verdicts=S	engine=1909	cells=14259	unions=6194	unionsOk=4499	ms=1026.4
+ABL	ISW AND (5 shares)	sym=true	extendAll=false	union=2	verdicts=S	engine=1727	cells=8972	unions=8009	unionsOk=5015	ms=1479.8
+ABL	ISW AND (5 shares)	sym=false	extendAll=true	union=0	verdicts=S	engine=521	cells=11063	unions=0	unionsOk=0	ms=58.9
+ABL	ISW AND (5 shares)	sym=false	extendAll=true	union=1	verdicts=S	engine=152	cells=12630	unions=3920	unionsOk=3846	ms=216.8
+ABL	ISW AND (5 shares)	sym=false	extendAll=true	union=2	verdicts=S	engine=80	cells=3632	unions=3051	unionsOk=2175	ms=418.6
+ABL	ISW AND (5 shares)	sym=false	extendAll=false	union=0	verdicts=S	engine=16659	cells=21135	unions=0	unionsOk=0	ms=712.0
+ABL	ISW AND (5 shares)	sym=false	extendAll=false	union=1	verdicts=S	engine=789	cells=5349	unions=3690	unionsOk=2928	ms=479.6
+ABL	ISW AND (5 shares)	sym=false	extendAll=false	union=2	verdicts=S	engine=774	cells=4139	unions=3711	unionsOk=2691	ms=562.4
+ABL	TI Fides AB1 (4 shares)	sym=true	extendAll=true	union=0	verdicts=S	engine=31	cells=31	unions=0	unionsOk=0	ms=23.5
+ABL	TI Fides AB1 (4 shares)	sym=true	extendAll=true	union=1	verdicts=S	engine=27	cells=28	unions=28	unionsOk=1	ms=1393.0
+ABL	TI Fides AB1 (4 shares)	sym=true	extendAll=true	union=2	verdicts=S	engine=27	cells=28	unions=28	unionsOk=1	ms=1368.6
+ABL	TI Fides AB1 (4 shares)	sym=true	extendAll=false	union=0	verdicts=S	engine=31	cells=31	unions=0	unionsOk=0	ms=17.2
+ABL	TI Fides AB1 (4 shares)	sym=true	extendAll=false	union=1	verdicts=S	engine=27	cells=28	unions=28	unionsOk=1	ms=1288.9
+ABL	TI Fides AB1 (4 shares)	sym=true	extendAll=false	union=2	verdicts=S	engine=27	cells=28	unions=28	unionsOk=1	ms=1300.3
+ABL	TI Fides AB1 (4 shares)	sym=false	extendAll=true	union=0	verdicts=S	engine=31	cells=31	unions=0	unionsOk=0	ms=19.5
+ABL	TI Fides AB1 (4 shares)	sym=false	extendAll=true	union=1	verdicts=S	engine=27	cells=28	unions=28	unionsOk=1	ms=1375.5
+ABL	TI Fides AB1 (4 shares)	sym=false	extendAll=true	union=2	verdicts=S	engine=27	cells=28	unions=28	unionsOk=1	ms=1367.6
+ABL	TI Fides AB1 (4 shares)	sym=false	extendAll=false	union=0	verdicts=S	engine=31	cells=31	unions=0	unionsOk=0	ms=12.5
+ABL	TI Fides AB1 (4 shares)	sym=false	extendAll=false	union=1	verdicts=S	engine=27	cells=28	unions=28	unionsOk=1	ms=1299.5
+ABL	TI Fides AB1 (4 shares)	sym=false	extendAll=false	union=2	verdicts=S	engine=27	cells=28	unions=28	unionsOk=1	ms=1277.6
+ABL	suite	sym=true	extendAll=true	union=3	verdicts=SSSSSISISSISISSSSSSSISSSSSSISSSSSSISSSSSI	engine=736	cells=17583	unions=2377	unionsOk=1944	ms=210.9
+ABL	suite	sym=true	extendAll=true	union=4	verdicts=SSSSSISISSISISSSSSSSISSSSSSISSSSSSISSSSSI	engine=635	cells=9115	unions=6269	unionsOk=2829	ms=235.3
+ABL	suite	sym=true	extendAll=false	union=3	verdicts=SSSSSISISSISISSSSSSSISSSSSSISSSSSSISSSSSI	engine=6859	cells=25581	unions=12311	unionsOk=6214	ms=746.3
+ABL	suite	sym=true	extendAll=false	union=4	verdicts=SSSSSISISSISISSSSSSSISSSSSSISSSSSSISSSSSI	engine=6669	cells=20960	unions=18182	unionsOk=7727	ms=734.6
+ABL	DOM Keccak χ (4 shares)	sym=true	extendAll=true	union=3	verdicts=S	engine=432	cells=13139	unions=592	unionsOk=177	ms=153.1
+ABL	DOM Keccak χ (4 shares)	sym=true	extendAll=true	union=4	verdicts=S	engine=351	cells=10209	unions=9881	unionsOk=1283	ms=544.7
+ABL	DOM Keccak χ (4 shares)	sym=true	extendAll=false	union=3	verdicts=S	engine=6858	cells=17309	unions=7836	unionsOk=1069	ms=1118.3
+ABL	DOM Keccak χ (4 shares)	sym=true	extendAll=false	union=4	verdicts=S	engine=6694	cells=15761	unions=15499	unionsOk=1624	ms=1401.1
+ABL	DOM AND (5 shares)	sym=true	extendAll=true	union=3	verdicts=S	engine=162	cells=14379	unions=424	unionsOk=362	ms=95.2
+ABL	DOM AND (5 shares)	sym=true	extendAll=true	union=4	verdicts=S	engine=82	cells=6841	unions=5399	unionsOk=2985	ms=155.1
+ABL	DOM AND (5 shares)	sym=true	extendAll=false	union=3	verdicts=S	engine=1018	cells=26297	unions=2696	unionsOk=2096	ms=352.5
+ABL	DOM AND (5 shares)	sym=true	extendAll=false	union=4	verdicts=S	engine=579	cells=10901	unions=9209	unionsOk=5329	ms=279.6
+ABL	ISW AND (5 shares)	sym=true	extendAll=true	union=3	verdicts=S	engine=316	cells=15174	unions=1903	unionsOk=1756	ms=105.5
+ABL	ISW AND (5 shares)	sym=true	extendAll=true	union=4	verdicts=S	engine=244	cells=7203	unions=4761	unionsOk=2399	ms=116.9
+ABL	ISW AND (5 shares)	sym=true	extendAll=false	union=3	verdicts=S	engine=5749	cells=22820	unions=11031	unionsOk=5801	ms=624.2
+ABL	ISW AND (5 shares)	sym=true	extendAll=false	union=4	verdicts=S	engine=5619	cells=18601	unions=16208	unionsOk=7182	ms=611.0
+ABL	TI Fides AB1 (4 shares)	sym=true	extendAll=true	union=3	verdicts=S	engine=31	cells=31	unions=31	unionsOk=0	ms=51.7
+ABL	TI Fides AB1 (4 shares)	sym=true	extendAll=true	union=4	verdicts=S	engine=31	cells=31	unions=31	unionsOk=0	ms=50.0
+ABL	TI Fides AB1 (4 shares)	sym=true	extendAll=false	union=3	verdicts=S	engine=31	cells=31	unions=31	unionsOk=0	ms=42.8
+ABL	TI Fides AB1 (4 shares)	sym=true	extendAll=false	union=4	verdicts=S	engine=31	cells=31	unions=31	unionsOk=0	ms=43.2

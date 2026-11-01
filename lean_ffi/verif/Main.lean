@@ -1201,7 +1201,7 @@ def symLine (name : String) (g : GlobalDAG) (d : Nat) : String :=
   | some p =>
     let rc := fmt (rootCheck n d p.rootTables p.roots)
     let cov := if !res.isSecure then "-" else fmt (coverageAuditCells #[s.store] p.roots)
-    s!"SYM\t{name}\t{d}\t{if res.isSecure then "S" else "I"}\tgroups={p.label}\tautomorphisms={p.sym.size}\troot={p.rootSize}/{p.totalSize} in {p.roots.size} cells\tengine={s.cnt.engine}\tcells={s.cnt.cells}\tcovers={s.cnt.covers}\tdeep={s.cnt.deep}\tskips={s.cnt.skips}\trootCheck={rc}\tcoverage={cov}"
+    s!"SYM\t{name}\t{d}\t{if res.isSecure then "S" else "I"}\tgroup={p.label}\tautomorphisms={p.sym.size}\troot={p.rootSize}/{p.totalSize} in {p.roots.size} cells\tengine={s.cnt.engine}\tcells={s.cnt.cells}\tcovers={s.cnt.covers}\tdeep={s.cnt.deep}\tskips={s.cnt.skips}\trootCheck={rc}\tcoverage={cov}"
 
 def goldenLines : IO (Array String) := do
   let mut out : Array String := #[]
@@ -1337,7 +1337,7 @@ def benchSymOne (name : String) : IO Unit := do
       if k == 0 || t < best then best := t
       if k == 0 || tp < bestPlan then bestPlan := tp
       if k == 2 then
-        IO.println s!"SYM\t{name}\t{d}\t{if res.isSecure then "S" else "I"}\tgroups={p.label}\troot={p.rootSize}/{p.totalSize}\tengine={s.cnt.engine}\tcells={s.cnt.cells}\tdeep={s.cnt.deep}\tms={best / 1000000}.{(best / 100000) % 10}\tsetup_ms={bestPlan / 1000000}.{(bestPlan / 100000) % 10}"
+        IO.println s!"SYM\t{name}\t{d}\t{if res.isSecure then "S" else "I"}\tgroup={p.label}\troot={p.rootSize}/{p.totalSize}\tengine={s.cnt.engine}\tcells={s.cnt.cells}\tdeep={s.cnt.deep}\tms={best / 1000000}.{(best / 100000) % 10}\tsetup_ms={bestPlan / 1000000}.{(bestPlan / 100000) % 10}"
 
 /-- `bench setup <gadget>`: where the symmetry setup time goes. -/
 def benchSetup (name : String) : IO Unit := do
@@ -1345,30 +1345,26 @@ def benchSetup (name : String) : IO Unit := do
   | none => IO.eprintln s!"unknown gadget '{name}'"
   | some (_, g, d) =>
     let ws := g.circuit.wireOrder
-    let (cands, t1) ← timeNs (fun _ => symmetriesOf g 600)
-    let (els, t2) ← timeNs (fun _ => cands.map (fun s => WireTables.of s ws))
-    let ((ri, roots), t3) ← timeNs (fun _ => bestRootGroup els d)
+    let (s, t1) ← timeNs (fun _ => symmetryOf g 600)
+    let (E, t2) ← timeNs (fun _ => WireTables.of s ws)
+    let (roots, t3) ← timeNs (fun _ => orbitalRoot E d)
     let ms (x : Nat) : String := s!"{x / 1000000}.{(x / 100000) % 10}"
-    IO.println s!"SETUP\t{name}\tgroups={String.intercalate "+" (cands.toList.map (fun s => toString s.order))}\tgroupExtraction={ms t1}\twireTables={ms t2}\torbitalRoot={ms t3}\troot={rootProbeCount roots}/{binomial ws.size d}\tri={ri}"
+    IO.println s!"SETUP\t{name}\tgroup={s.order}\tgroupExtraction={ms t1}\twireTables={ms t2}\torbitalRoot={ms t3}\troot={rootProbeCount roots}/{binomial ws.size d}"
 
-/-- `bench groups <gadget>`: the steps of `symmetriesOf`, timed. -/
+/-- `bench groups <gadget>`: the steps of `symmetryOf`, timed. -/
 def benchGroups (name : String) : IO Unit := do
   match (benchSuite ++ benchLarge).find? (·.1 == name) with
   | none => IO.eprintln s!"unknown gadget '{name}'"
   | some (_, g, _) =>
     let c0 := g.circuit
-    let ((rc, _), t1) ← timeNs (fun _ => contractAssoc c0)
-    let ((gl, rl), t2) ← timeNs (fun _ => automorphisms rc)
-    let ((leafG, _), t3) ← timeNs (fun _ => closedGroup (rl.gens.map (leafMapOf gl)) 600)
-    let (chk, t4) ← timeNs (fun _ => shareChecks c0)
-    let (chk2, t5) ← timeNs (fun _ => shareChecks rc)
-    let bundles := if chk2.ok then chk2.bundles else chk.bundles
-    let (sg, t6) ← timeNs (fun _ => buildShareGraph rc bundles)
-    let ((_, _, gens), t7) ← timeNs (fun _ => groupOf sg 200000 sg.kind)
-    let ((shG, _), t8) ← timeNs (fun _ => closedGroup (gens.map (atomicLeafMap sg)) 600)
-    let (ad, t9) ← timeNs (fun _ => buildAtomicDAG c0)
+    let (chk, t1) ← timeNs (fun _ => shareChecks c0)
+    let ((rc, _), t2) ← timeNs (fun _ => contractAssoc c0)
+    let (sg, t3) ← timeNs (fun _ => buildShareGraph rc chk.bundles)
+    let ((_, _, gens), t4) ← timeNs (fun _ => groupOf sg 200000 sg.kind)
+    let ((els, _), t5) ← timeNs (fun _ => closedGroup (gens.map (atomicLeafMap sg)) 600)
+    let (ad, t6) ← timeNs (fun _ => buildAtomicDAG c0)
     let ms (x : Nat) : String := s!"{x / 1000000}.{(x / 100000) % 10}"
-    IO.println s!"GROUPS\t{name}\tleaf={leafG.size}\tshare={shG.size}\tcontract={ms t1}\tautomorphisms={ms t2}\tcloseLeaf={ms t3}\tshareChecks={ms t4}+{ms t5}\tshareGraph={ms t6}\tgroupOf={ms t7}\tcloseShare={ms t8}\tatomicDAG={ms t9}\t(atomic nodes {ad.dag.nextId})"
+    IO.println s!"GROUPS\t{name}\tgroup={els.size}\tshareChecks={ms t1}\tcontract={ms t2}\tshareGraph={ms t3}\tgroupOf={ms t4}\tclose={ms t5}\tatomicDAG={ms t6}\t(atomic nodes {ad.dag.nextId})"
 
 /-- `bench plainroot <gadget>`: symmetric lookups with the plain root (experiment). -/
 def benchPlainRoot (name : String) : IO Unit := do
@@ -1381,7 +1377,7 @@ def benchPlainRoot (name : String) : IO Unit := do
       if k == 0 || t < best then best := t
       if k == 2 then IO.println s!"PLAINROOT\t{name}\tengine={s.cnt.engine}\tcells={s.cnt.cells}\tdeep={s.cnt.deep}\tms={best / 1000000}.{(best / 100000) % 10}"
 
-/-- `bench cap <gadget> <cap>`: the symmetric search with groups capped at `cap`. -/
+/-- `bench cap <gadget> <cap>`: the symmetric search with the group capped at `cap`. -/
 def benchCap (name : String) (cap : Nat) : IO Unit := do
   match (benchSuite ++ benchLarge).find? (·.1 == name) with
   | none => IO.eprintln s!"unknown gadget '{name}'"
@@ -1393,10 +1389,10 @@ def benchCap (name : String) (cap : Nat) : IO Unit := do
       let ((_, s, _, _), t) ← timeNs (fun _ => checkDProbingSym g d (groupCap := cap))
       if k == 0 || t < best then best := t
       if k == 0 || tp < bestP then bestP := tp
-      if k == 2 then IO.println s!"CAP {cap}\t{name}\tgroups={p.label}\tauts={p.sym.size}\troot={p.rootSize}/{p.totalSize}\tengine={s.cnt.engine}\tcells={s.cnt.cells}\tms={best / 1000000}.{(best / 100000) % 10}\tsetup={bestP / 1000000}.{(bestP / 100000) % 10}"
+      if k == 2 then IO.println s!"CAP {cap}\t{name}\tgroup={p.label}\tauts={p.sym.size}\troot={p.rootSize}/{p.totalSize}\tengine={s.cnt.engine}\tcells={s.cnt.cells}\tms={best / 1000000}.{(best / 100000) % 10}\tsetup={bestP / 1000000}.{(bestP / 100000) % 10}"
 
 /-- `trace <gadget>`: the symmetric cell search on one gadget, step by step —
-    wires, groups, root cells, and every cell visit with its outcome. -/
+    wires, group, root cells, and every cell visit with its outcome. -/
 def runTrace (name : String) : IO Unit := do
   match (benchSuite ++ benchLarge).find? (·.1 == name) with
   | none => IO.eprintln s!"unknown gadget '{name}'"
@@ -1411,7 +1407,7 @@ def runTrace (name : String) : IO Unit := do
     for w in g.circuit.inputOrder ++ ws do
       IO.println s!"  {Circuit.ppLine g.circuit (if g.circuit.inputOrder.contains w then "[in] " else "") w}"
     let p := planSymmetry g d
-    IO.println s!"GROUPS {p.label}; automorphisms used for lookups: {p.sym.size}"
+    IO.println s!"GROUP {p.label}; automorphisms used for lookups: {p.sym.size}"
     for (f, _) in p.sym.extract 0 (min 6 p.sym.size) do
       let moved := (Array.range n).filter (fun w => f[w]! < n && f[w]! != w)
       let inval := (Array.range n).filter (fun w => f[w]! >= n)
@@ -1445,6 +1441,308 @@ def runTrace (name : String) : IO Unit := do
       | none => stack := stack ++ kids.reverse
     IO.println s!"DONE engine={s.cnt.engine} cells={s.cnt.cells} covers={s.cnt.covers} (through symmetry {s.cnt.deep}) skips={s.cnt.skips} stored={s.store.sets.size}"
 
+/-- `bench ablate <gadget|suite> <sym 0/1> <extendAll 0/1> <union 0/1/2>`: one search
+    variant, best of 3, setup included.  `suite` sums over the 41 entries. -/
+def benchAblate (name : String) (sym : Bool) (extendAll : Bool) (union : Nat) : IO Unit := do
+  let opts : SearchOpts := { extendAll, union }
+  let rows := if name == "suite" then benchSuite
+    else (benchSuite ++ benchLarge).filter (·.1 == name) |>.take 1
+  let mut total := 0
+  let mut eng := 0
+  let mut cells := 0
+  let mut uni := 0
+  let mut uok := 0
+  let mut verdicts := ""
+  for (_, g, d) in rows do
+    let mut best := 0
+    for k in [0:3] do
+      let ((_, s, res, _), t) ← timeNs (fun _ => checkDProbingSym g d sym (opts := opts))
+      if k == 0 || t < best then best := t
+      if k == 2 then
+        eng := eng + s.cnt.engine; cells := cells + s.cnt.cells
+        uni := uni + s.cnt.unions; uok := uok + s.cnt.unionsOk
+        verdicts := verdicts ++ (if res.isSecure then "S" else "I")
+    total := total + best
+  IO.println s!"ABL\t{name}\tsym={sym}\textendAll={extendAll}\tunion={union}\tverdicts={verdicts}\tengine={eng}\tcells={cells}\tunions={uni}\tunionsOk={uok}\tms={total / 1000000}.{(total / 100000) % 10}"
+
+/-- `bench contraction <gadget|suite|all> <contract 0/1>`: the symmetric search with the
+    group found on the contracted or the as-built netlist, best of 3, setup included. -/
+def benchContraction (name : String) (contract : Bool) : IO Unit := do
+  let opts : SearchOpts := { contract }
+  let rows := if name == "suite" then benchSuite
+    else if name == "all" then benchSuite ++ benchLarge
+    else (benchSuite ++ benchLarge).filter (·.1 == name) |>.take 1
+  let mut total := 0
+  let mut eng := 0
+  let mut cells := 0
+  let mut verdicts := ""
+  for (nm, g, d) in rows do
+    let mut best := 0
+    let mut line := ""
+    for k in [0:3] do
+      let ((_, s, res, p?), t) ← timeNs (fun _ => checkDProbingSym g d (opts := opts))
+      if k == 0 || t < best then best := t
+      if k == 2 then
+        eng := eng + s.cnt.engine; cells := cells + s.cnt.cells
+        verdicts := verdicts ++ (if res.isSecure then "S" else "I")
+        let lbl := match p? with | some p => s!"{p.label} root={p.rootSize}/{p.totalSize}" | none => "-"
+        line := s!"{if res.isSecure then "S" else "I"}\t{lbl}\tengine={s.cnt.engine}\tcells={s.cnt.cells}"
+    total := total + best
+    IO.println s!"CONTRACTION\t{nm}\t{d}\tcontract={contract}\t{line}\tms={best / 1000000}.{(best / 100000) % 10}"
+    (← IO.getStdout).flush
+  IO.println s!"CONTRACTION-TOTAL\t{name}\tcontract={contract}\tverdicts={verdicts}\tengine={eng}\tcells={cells}\tms={total / 1000000}.{(total / 100000) % 10}"
+
+/-- `bench groups-report <cap>`: for every gadget, what contraction absorbs, the group
+    order with and without contraction, whether the sharing checks hold, and how the
+    group acts on the real wires. -/
+def benchGroupsReport (cap : Nat) : IO Unit := do
+  for (name, g, _) in benchSuite ++ benchLarge do
+    let c0 := g.circuit
+    let ws := c0.wireOrder
+    let n := ws.size
+    let (rc, absorbed) := contractAssoc c0
+    let chk := shareChecks c0
+    let ordOf (c : Circuit) : Nat :=
+      if chk.ok then
+        let sg := buildShareGraph c chk.bundles
+        let (_, ord, _) := groupOf sg 200000 sg.kind
+        ord
+      else 0
+    let s := symmetryOf g cap
+    let E := WireTables.of s ws
+    let isLive (f : Array Nat) : Bool := (Array.range n).any (fun w => f[w]! < n && f[w]! != w)
+    let T := E.fwd.filter isLive
+    let validPct : Nat :=
+      if T.isEmpty then 0 else
+        (T.foldl (fun a f => a + (f.filter (· < n)).size) 0) * 100 / (T.size * n)
+    let gone : HashMap String Unit := absorbed.foldl (fun m w => m.insert w ()) {}
+    let survivors := (Array.range n).filter (fun w => !gone.contains ws[w]!)
+    let dom := stableIn E (Array.range E.fwd.size) (Array.range n)
+    let inD := maskOf n dom
+    let outside := (survivors.filter (fun w => !inD[w]!)).size
+    let probs := if chk.ok then "ok" else String.ofList ((chk.problems[0]!).toList.take 70)
+    -- body wires that repeat another wire's expression, on the DAG the tables read
+    let dups : Nat := if s.active then
+        let nodes := ws.filterMap (fun w => s.dag.wires[w]?)
+        let cnt : HashMap NodeId Nat := nodes.foldl (fun m x => m.insert x ((m[x]?).getD 0 + 1)) {}
+        (nodes.filter (fun x => (cnt[x]?).getD 0 > 1)).size
+      else 0
+    -- Lemma (b) at the level of expressions: surviving wires that some element sends to an
+    -- expression no wire computes (raw `nameMap`, before the tables refuse duplicates)
+    let lost : Nat := if s.active then
+        let maps := s.group.map (fun e => nameMap s.dag (normLM e))
+        (survivors.filter (fun w => maps.any (fun m => !m.contains ws[w]!))).size
+      else 0
+    IO.println s!"GR\t{name}\tsurvivorsNoImage={lost}\twires={n}\tabsorbed={absorbed.size}\torder:built={ordOf c0} contracted={ordOf rc}\tlisted={T.size + 1}\tvalid%={validPct}\tdupWires={dups}\tsurvivorsOutside={outside}\tchecks={probs}"
+    (← IO.getStdout).flush
+
+/-- `bench trichina`: the secure and the insecure Trichina AND, contracted.  They differ only
+    in the bracketing of one sum, so contraction identifies them. -/
+def benchTrichina : IO Unit := do
+  let pick (nm : String) : GlobalDAG := ((benchSuite.find? (·.1 == nm)).get!).2.1
+  let render (x : Circuit) : List String :=
+    (x.wireOrder.toList.map (fun w =>
+      let sortIn := (Circuit.ppWireDef x.wireDefs[w]!).splitOn " + " |>.toArray.qsort (· < ·)
+      w ++ " = " ++ String.intercalate " + " sortIn.toList))
+  let (a, _) := contractAssoc (pick "Trichina AND").circuit
+  let (b, _) := contractAssoc (pick "Trichina AND (bad assoc)").circuit
+  for l in render a do IO.println s!"good  {l}"
+  for l in render b do IO.println s!"bad   {l}"
+  IO.println s!"identical after contraction: {render a == render b}"
+
+-- ------------------------------------------------------------
+-- Brute-force transport check
+-- ------------------------------------------------------------
+
+/-- The raw netlist evaluated on every assignment of its leaves: `(values, secret
+    index, secret-value count)`, `values[w][e]` being wire `w` under assignment `e`.
+    Deliberately reads `wireDefs` only — no DAG, no interning, no canonicalisation —
+    so it shares nothing with the code it checks.  Publics count as secrets (they
+    are quantified over). -/
+def truthTables (c : Circuit) : Option (HashMap String ByteArray × Array Nat × Nat) := Id.run do
+  let names := c.inputOrder ++ c.wireOrder
+  let mut sec : Array VarType := #[]
+  let mut rnd : Array VarType := #[]
+  for nm in names do
+    for i in (c.wireDefs[nm]!).inputs do
+      match i with
+      | .leaf l@(.Random _) => if !rnd.contains l then rnd := rnd.push l
+      | .leaf l => if !sec.contains l then sec := sec.push l
+      | _ => pure ()
+  let L := sec.size + rnd.size
+  if L > 18 then return none
+  let N := 1 <<< L
+  let leaves := sec ++ rnd
+  let idx : HashMap VarType Nat := (leaves.zipIdx).foldl (fun m (v, i) => m.insert v i) {}
+  let mut vals : HashMap String ByteArray := {}
+  for nm in names do
+    let d := c.wireDefs[nm]!
+    let mut acc := ByteArray.mk (Array.replicate N (if d.isXor then 0 else 1))
+    for i in d.inputs do
+      for e in [0:N] do
+        let b : UInt8 := match i with
+          | .leaf l  => (((e >>> idx[l]!) &&& 1 : Nat).toUInt8)
+          | .const v => if v then 1 else 0
+          | .wire w  => (vals[w]!).get! e
+        let a := acc.get! e
+        acc := acc.set! e (if d.isXor then a ^^^ b else a &&& b)
+    vals := vals.insert nm acc
+  let secIdx := (Array.range N).map (fun e => e &&& ((1 <<< sec.size) - 1))
+  return some (vals, secIdx, 1 <<< sec.size)
+
+/-- For each secret value, the histogram of the tuple `P`, hashed; sorted, so that two
+    tuples agree exactly when their conditional distributions agree up to renaming
+    the secret values. -/
+def distKey (vals : HashMap String ByteArray) (secIdx : Array Nat) (nSec : Nat) (P : Array String) : Array UInt64 := Id.run do
+  let cols := P.map (vals[·]!)
+  let k := P.size
+  let mut hist : Array Nat := Array.replicate (nSec <<< k) 0
+  for e in [0:secIdx.size] do
+    let mut key := secIdx[e]! <<< k
+    for j in [0:k] do
+      key := key ||| ((cols[j]!.get! e).toNat <<< j)
+    hist := hist.modify key (· + 1)
+  let mut out : Array UInt64 := #[]
+  for s in [0:nSec] do
+    let mut h : UInt64 := 0x9E3779B97F4A7C15
+    for v in [0:1 <<< k] do
+      h := hash64 (h * 31 + (hist[(s <<< k) + v]!).toUInt64 + 1)
+    out := out.push h
+  return out.qsort (· < ·)
+
+/-- Probe sets of size `k` drawn from `dom`: all of them, or `budget` seeded samples. -/
+def probeSample (dom : Array Nat) (k budget : Nat) (seed : Nat) : Array (Array Nat) := Id.run do
+  if dom.size < k then return #[]
+  if binomial dom.size k ≤ budget then
+    let mut out : Array (Array Nat) := #[#[]]
+    for _ in [0:k] do
+      out := out.foldl (fun acc p =>
+        let start := if p.isEmpty then 0 else p.back! + 1
+        acc ++ ((List.range (dom.size - start)).toArray.map (fun i => p.push (start + i)))) #[]
+    return out.map (·.map (dom[·]!))
+  let mut st := seed
+  let mut out : Array (Array Nat) := #[]
+  for _ in [0:budget] do
+    let (idx, st1) := sampleIdx dom.size k st
+    st := st1
+    out := out.push (idx.map (dom[·]!))
+  return out
+
+/-- Count, over the probe sets of size `k` on which table `f` is valid and moves something,
+    how many have a different distribution from their image. -/
+def transportViolations (vals : HashMap String ByteArray) (secIdx : Array Nat) (nSec : Nat)
+    (ws : Array String) (f : Array Nat) (k budget seed : Nat) : Nat × Nat := Id.run do
+  let n := ws.size
+  let dom := (Array.range n).filter (fun w => f[w]! < n)
+  let mut tested := 0
+  let mut bad := 0
+  for P in probeSample dom k budget seed do
+    if P.any (fun w => f[w]! != w) then
+      tested := tested + 1
+      let Q := P.map (f[·]!)
+      if distKey vals secIdx nSec (P.map (ws[·]!)) != distKey vals secIdx nSec (Q.map (ws[·]!)) then
+        bad := bad + 1
+  return (tested, bad)
+
+/-- `bench transport`: the property everything rests on, checked by brute force on the raw
+    netlist.  (a) every listed group element; (b) relabellings of the atoms that map whole
+    sharings to whole sharings and come from no symmetry search at all; (c) corrupted tables,
+    which must be caught, so that (a) and (b) mean something. -/
+def benchTransport : IO Unit := do
+  let work : Nat := 1 <<< 27
+  let mut sumT := 0
+  let mut sumB := 0
+  let mut sumBog := 0
+  let mut sumBogB := 0
+  let mut caught := 0
+  let mut planted := 0
+  for (name, g, d) in benchSuite ++ benchLarge do
+    let c := g.circuit
+    let ws := c.wireOrder
+    let n := ws.size
+    match truthTables c with
+    | none => IO.println s!"TRANSPORT\t{name}\tskipped (too many leaves)"
+    | some (vals, secIdx, nSec) =>
+      let s := symmetryOf g 64
+      let T := (WireTables.of s ws).fwd.filter
+        (fun f => (Array.range n).any (fun w => f[w]! < n && f[w]! != w))
+      let sizes := [d, d + 1]
+      let budget := (work / secIdx.size / (max T.size 1 + 8) / (sizes.length * 2)) + 1
+      let mut seed : Nat := 88172645463325252
+      let mut gt := 0
+      let mut gb := 0
+      for f in T do
+        for k in sizes do
+          seed := seed + 1
+          let (t', b') := transportViolations vals secIdx nSec ws f k budget seed
+          gt := gt + t'; gb := gb + b'
+      sumT := sumT + gt; sumB := sumB + gb
+      -- (b) relabellings from nowhere: swap two shares of a sharing, two gadget randoms, or two
+      -- whole sharings of the same size; take whatever is valid
+      let atom (nm : String) : VarType := .Public s!"sh:{nm}"
+      let bundles := (shareChecks c).bundles
+      let rnds : Array VarType := ws.foldl (fun acc nm =>
+        (c.wireDefs[nm]!).inputs.foldl (fun acc i => match i with
+          | .leaf l@(.Random _) => if acc.contains l then acc else acc.push l
+          | _ => acc) acc) #[]
+      let mut swaps : Array (Array (VarType × VarType)) := #[]
+      for x in bundles do
+        for i in [0:x.shares.size - 1] do
+          swaps := swaps.push #[(atom x.shares[i]!, atom x.shares[i + 1]!)]
+      for i in [0:min rnds.size 6] do
+        for j in [i+1:min rnds.size 6] do
+          swaps := swaps.push #[(rnds[i]!, rnds[j]!)]
+      for i in [0:bundles.size - 1] do
+        let x := bundles[i]!
+        let y := bundles[i + 1]!
+        if x.shares.size == y.shares.size then
+          swaps := swaps.push (x.shares.zip y.shares |>.map (fun (u, v) => (atom u, atom v)))
+      let mut bt := 0
+      let mut bb := 0
+      if s.active then
+        let pos : HashMap String Nat := (ws.zipIdx).foldl (fun acc (w, q) => acc.insert w q) {}
+        for sw in swaps do
+          let lm : HashMap VarType VarType := sw.foldl (fun m (u, v) => (m.insert u v).insert v u) {}
+          let m := nameMap s.dag lm
+          let f := ws.map (fun w => match m[w]? with | some v => (pos[v]?).getD n | none => n)
+          seed := seed + 1
+          let (t', b') := transportViolations vals secIdx nSec ws f d (budget / 4 + 1) seed
+          bt := bt + t'; bb := bb + b'
+      sumBog := sumBog + bt; sumBogB := sumBogB + bb
+      -- (c) corrupt a real table: exchange two images inside its valid part
+      let mut plantedHere := 0
+      let mut caughtHere := 0
+      for f in T.extract 0 (min T.size 4) do
+        let dom := (Array.range n).filter (fun w => f[w]! < n)
+        if dom.size ≥ 2 then
+          let a := dom[0]!
+          let b := dom[dom.size - 1]!
+          if f[a]! != f[b]! then
+            let f' := (f.set! a f[b]!).set! b f[a]!
+            seed := seed + 1
+            let (_, v1) := transportViolations vals secIdx nSec ws f' d (budget / 2 + 1) seed
+            let (_, v2) := transportViolations vals secIdx nSec ws f' (d + 1) (budget / 2 + 1) (seed + 7)
+            plantedHere := plantedHere + 1
+            if v1 + v2 > 0 then caughtHere := caughtHere + 1
+      planted := planted + plantedHere; caught := caught + caughtHere
+      IO.println s!"TRANSPORT\t{name}\t{d}\tleaves=2^{secIdx.size.log2}\tper-table budget={budget}\tgroup: elements={T.size} tested={gt} violations={gb}\tfree relabellings: tested={bt} violations={bb}\tcorrupted tables: {caughtHere}/{plantedHere} caught"
+      (← IO.getStdout).flush
+  -- (d) a relabelling that splits a sharing has a perfect wire map and still fails
+  let mut h : GlobalDAG := {}
+  h := demoShares h "a" "a" 2
+  h := demoShares h "b" "b" 2
+  h := h.addWireXor "v" #[.wire "a0", .wire "a1"]
+  h := h.addWireXor "w" #[.wire "a0", .wire "b1"]
+  let atomic := buildAtomicDAG h.circuit
+  let swap : HashMap VarType VarType := ({} : HashMap VarType VarType)
+    |>.insert (.Public "sh:a1") (.Public "sh:b1") |>.insert (.Public "sh:b1") (.Public "sh:a1")
+  let m := nameMap atomic swap
+  let wrong := match truthTables h.circuit with
+    | some (vals, secIdx, nSec) =>
+      distKey vals secIdx nSec #["v"] != distKey vals secIdx nSec #["w"]
+    | none => false
+  IO.println s!"TRANSPORT-SUMMARY\tgroup elements: tested={sumT} violations={sumB}\tfree relabellings: tested={sumBog} violations={sumBogB}\tcorrupted tables caught={caught}/{planted}\tsplit-sharing swap maps v to {m["v"]?.getD "-"}; distributions differ={wrong}"
+
 def runBench : IO Unit := do
   IO.println "=== end-to-end checkDProbing (best of 3) ==="
   let mut total := 0
@@ -1461,27 +1759,28 @@ def runBench : IO Unit := do
   IO.println s!"E2E-TOTAL\tms={total / 1000000}"
   IO.println "=== cell search, no symmetry (best of 3) ==="
   let mut totalC := 0
-  for (name, g, d) in benchSuite ++ benchLarge do
+  -- `benchLarge` repeats some suite entries: each entry counts towards the suite total once
+  for ((name, g, d), i) in (benchSuite ++ benchLarge).zipIdx do
     let mut best := 0
     let mut line := ""
     for k in [0:3] do
       let ((_, s, res), t) ← timeNs (fun _ => checkDProbingCells g d)
       if k == 0 || t < best then best := t
       line := s!"{if res.isSecure then "S" else "I"}\tengine={s.cnt.engine}\tcells={s.cnt.cells}"
-    if benchSuite.any (·.1 == name) then totalC := totalC + best
+    if i < benchSuite.length then totalC := totalC + best
     IO.println s!"CELLS\t{name}\t{d}\t{line}\tms={best / 1000000}.{(best / 100000) % 10}"
     (← IO.getStdout).flush
   IO.println s!"CELLS-TOTAL(suite)\tms={totalC / 1000000}"
   IO.println "=== symmetric cell search, setup included (best of 3) ==="
   let mut totalS := 0
-  for (name, g, d) in benchSuite ++ benchLarge do
+  for ((name, g, d), i) in (benchSuite ++ benchLarge).zipIdx do
     let mut best := 0
     let mut line := ""
     for k in [0:3] do
       let ((_, s, res, _), t) ← timeNs (fun _ => checkDProbingSym g d)
       if k == 0 || t < best then best := t
       line := s!"{if res.isSecure then "S" else "I"}\tengine={s.cnt.engine}\tcells={s.cnt.cells}\tdeep={s.cnt.deep}"
-    if benchSuite.any (·.1 == name) then totalS := totalS + best
+    if i < benchSuite.length then totalS := totalS + best
     IO.println s!"SYM\t{name}\t{d}\t{line}\tms={best / 1000000}.{(best / 100000) % 10}"
     (← IO.getStdout).flush
   IO.println s!"SYM-TOTAL(suite)\tms={totalS / 1000000}"
@@ -1500,10 +1799,16 @@ def main (args : List String) : IO UInt32 :=
   | ["trace", name] => do verif.runTrace name; return 0
   | ["bench", "cells", name] => do verif.benchCellsOne name; return 0
   | ["bench", "sym", name] => do verif.benchSymOne name; return 0
+  | ["bench", "ablate", name, sy, ea, u] => do
+    verif.benchAblate name (sy == "1") (ea == "1") u.toNat!; return 0
   | ["bench", "setup", name] => do verif.benchSetup name; return 0
   | ["bench", "plainroot", name] => do verif.benchPlainRoot name; return 0
   | ["bench", "cap", name, c] => do verif.benchCap name c.toNat!; return 0
   | ["bench", "groups", name] => do verif.benchGroups name; return 0
+  | ["bench", "groups-report", c] => do verif.benchGroupsReport c.toNat!; return 0
+  | ["bench", "contraction", name, co] => do verif.benchContraction name (co == "1"); return 0
+  | ["bench", "transport"] => do verif.benchTransport; return 0
+  | ["bench", "trichina"] => do verif.benchTrichina; return 0
   | "golden" :: rest => verif.runGolden rest
   | ["check", name] =>
     -- one gadget, cell search with the automatic symmetry policy
@@ -1511,7 +1816,7 @@ def main (args : List String) : IO UInt32 :=
     | none => do IO.eprintln s!"unknown gadget '{name}'"; return 2
     | some (_, g, d) => do
       let (_, s, res, plan?) := verif.checkDProbingSym g d
-      IO.println s!"{name} @ order {d}: {if res.isSecure then "SECURE" else "INSECURE"}  (engine calls {s.cnt.engine}, cells {s.cnt.cells}, symmetry {if plan?.isSome then "on" else "off"})"
+      IO.println s!"{name} @ order {d}: {if res.isSecure then "SECURE" else "INSECURE"}  (engine calls {s.cnt.engine}, cells {s.cnt.cells}, group {(plan?.map (·.label)).getD "off"})"
       return 0
   | _            => do verif.runAblation; return 0
 

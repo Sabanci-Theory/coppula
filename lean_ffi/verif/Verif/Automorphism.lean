@@ -6,18 +6,14 @@ namespace verif
 open Std (HashMap)
 
 /-!
-# Circuit Automorphism Group (standalone experiment)
+# Circuit Automorphism Group
 
-Computes the automorphism group of a `Circuit`, i.e. of the **netlist DAG**
-(vertices = wires ∪ input shares ∪ leaves ∪ constants, edges = gate inputs).
-This is the `netlist-syntactic` level of `.ai/AUTOMORPHISM_PLAN.md` §6.2 — the
-conservative end of the hierarchy `netlist ⊂ DAG-canonical ⊂ ANF-exact ⊆ (★)`.
-Anything it finds is a genuine probing automorphism (Def. 2 of the memo); it may
-miss ones that only hold up to canonicalisation.
+Computes the automorphism group of a `Circuit` with its input shares as atoms:
+the group of the **share graph** (vertices = body wires ∪ shares ∪ gadget randoms
+∪ publics ∪ constants ∪ one bundle per sharing, edges = gate inputs; see
+`buildShareGraph`).  Needs the sharing conditions (S1)/(S2), checked by
+`shareChecks`.
 
-Not imported by `Verif.lean` (standalone for now):
-
-    lake build Verif.Automorphism        -- typecheck
     lake env lean Verif/Automorphism.lean -- run the `#eval` demos at the bottom
 
 ## Algorithm
@@ -25,17 +21,14 @@ Not imported by `Verif.lean` (standalone for now):
 Individualisation–refinement, the standard partition-backtracking scheme (nauty /
 saucy in miniature), specialised to a coloured DAG:
 
-1. **Initial colouring** by vertex kind: body-XOR / body-AND / share-XOR /
-   share-AND / Secret / Random / Public / const0 / const1.  Secrets, randoms and
-   publics are *not* distinguished from one another — they are a priori
-   interchangeable (memo §3: moving secrets is harmless).  Body wires and input
-   shares *are* distinguished, since `φ` must map probe targets to probe targets.
+1. **Initial colouring** by vertex kind: body-XOR / body-AND / share / Random /
+   Public / const0 / const1 / bundle.  Body wires and shares *are* distinguished,
+   since `φ` must map probe targets to probe targets.
 2. **Refinement (1-WL)**: recolour each vertex by its own colour plus the
    multiset of its children's and parents' colours, to a fixed point.  Multiset
    invariance comes from summing hashed colours (wrapping `UInt64` addition), so
-   a round is `O(V+E)`.  Parents are included because a random's role is
-   determined by where it is *used*, which is what separates gadget randomness
-   from encoding randomness.
+   a round is `O(V+E)`.  Parents are included because an atom's role is
+   determined by where it is *used*.
 3. **Search**: pick the smallest non-singleton cell, individualise a vertex on
    each side, refine, recurse.  Discrete-vs-discrete gives a candidate bijection.
 4. **Exact verification** (`verifyMap`) of every candidate before it is returned:
@@ -56,10 +49,10 @@ was hit (never silently truncate — memo §8.7).
   (`addWireXorChain`); contracting it reconstructs the n-ary netlist the builder
   started from.  This is how the share symmetries become visible at all: on the
   honest netlist they are destroyed by the chain intermediates (memo §6.1).
-* `stableDomain` — Definition 4.  Given leaf relabellings found on the relaxed
-  graph, computes `D ⊆ wireOrder`, the wires whose image is again a wire, using
-  the hash-consed DAG.  Wires outside `D` (the chain intermediates) simply drop
-  out.  This is the "dispose" half of propose-and-dispose.
+* `stableDomain` — Definition 4.  Given relabellings of the atoms found on the
+  relaxed graph, computes `D ⊆ wireOrder`, the wires whose image is again a wire,
+  using the hash-consed DAG.  Wires outside `D` (the chain intermediates) simply
+  drop out.  This is the "dispose" half of propose-and-dispose.
 -/
 
 -- ============================================================
@@ -70,7 +63,7 @@ inductive Vertex where
   | wire   : String  → Vertex
   | leaf   : VarType → Vertex
   | const  : Bool    → Vertex
-  /-- Share-atomic mode only: one vertex per sharing, joined to all of its
+  /-- One vertex per sharing, joined to all of its
       shares.  A graph automorphism must map bundle vertices to bundle vertices,
       which is exactly the fibring condition "the shares of `x` all land on the
       shares of one `y`" — enforced structurally, with no special-casing in the
@@ -106,55 +99,6 @@ structure Graph where
   let z := (z ^^^ (z >>> 30)) * 0xBF58476D1CE4E5B9
   let z := (z ^^^ (z >>> 27)) * 0x94D049BB133111EB
   z ^^^ (z >>> 31)
-
-def buildGraph (c : Circuit) : Graph := Id.run do
-  let names := c.inputOrder ++ c.wireOrder
-  -- wire vertices first, so their ids coincide with their position in `names`
-  let mut vertices : Array Vertex := #[]
-  let mut index : HashMap Vertex Nat := {}
-  for nm in names do
-    index := index.insert (Vertex.wire nm) vertices.size
-    vertices := vertices.push (Vertex.wire nm)
-  let mut children : Array (Array Nat) := Array.replicate vertices.size #[]
-  for i in [0:names.size] do
-    let nm := names[i]!
-    let d  := c.wireDefs[nm]!
-    let mut ch : Array Nat := #[]
-    for inp in d.inputs do
-      let v : Vertex := match inp with
-        | WireInput.leaf l  => Vertex.leaf l
-        | WireInput.const b => Vertex.const b
-        | WireInput.wire w  => Vertex.wire w
-      match index[v]? with
-      | some id => ch := ch.push id
-      | none    =>
-        let id := vertices.size
-        index    := index.insert v id
-        vertices := vertices.push v
-        children := children.push #[]
-        ch := ch.push id
-    children := children.set! i (ch.qsort (· < ·))
-  -- parent adjacency
-  let mut parents : Array (Array Nat) := Array.replicate vertices.size #[]
-  for v in [0:children.size] do
-    for ch in children[v]! do
-      parents := parents.set! ch ((parents[ch]!).push v)
-  -- kind colouring
-  let isBody : HashMap String Unit := c.wireOrder.foldl (fun m w => m.insert w ()) {}
-  let mut kind : Array UInt64 := Array.replicate vertices.size 0
-  for v in [0:vertices.size] do
-    let k : UInt64 := match vertices[v]! with
-      | Vertex.wire nm =>
-        let isX := (c.wireDefs[nm]!).isXor
-        if isBody.contains nm then (if isX then 1 else 2) else (if isX then 3 else 4)
-      | Vertex.leaf (VarType.Secret _) => 5
-      | Vertex.leaf (VarType.Random _) => 6
-      | Vertex.leaf (VarType.Public _) => 7
-      | Vertex.const false             => 8
-      | Vertex.const true              => 9
-      | Vertex.bundle _                => 10
-    kind := kind.set! v (hash64 k)
-  return { vertices, children, parents, kind, index }
 
 -- ============================================================
 -- Colour refinement
@@ -327,11 +271,6 @@ structure Report where
   /-- The search budget ran out; `order` is then a lower bound. -/
   capped : Bool                 := false
   deriving Inhabited
-
-def automorphisms (c : Circuit) (searchBudget : Nat := 200000) : Graph × Report :=
-  let g := buildGraph c
-  let (fuel, ord, gens) := groupOf g searchBudget g.kind
-  (g, { order := ord, gens := gens, capped := fuel == 0 })
 
 -- ============================================================
 -- Orbits and pretty printing
@@ -520,15 +459,6 @@ partial def contractAssoc (c : Circuit) : Circuit × Array String := Id.run do
 -- Stable domain (memo Definition 4) — the "dispose" half
 -- ============================================================
 
-/-- Extract the leaf relabelling `α` of an automorphism. -/
-def leafMapOf (g : Graph) (m : Array Nat) : HashMap VarType VarType := Id.run do
-  let mut lm : HashMap VarType VarType := {}
-  for v in [0:m.size] do
-    match g.vertices[v]!, g.vertices[m[v]!]! with
-    | Vertex.leaf a, Vertex.leaf b => lm := lm.insert a b
-    | _, _ => pure ()
-  return lm
-
 /-- `α̂` on DAG nodes: permute leaves and rebuild through `mkXor`/`mkAnd`, so
     canonicalisation (XOR cancellation, AND idempotence, flattening) applies.
     By construction `⟦α̂ n⟧ = ⟦n⟧ ∘ α*`. -/
@@ -617,49 +547,19 @@ def stableDomain (gd : GlobalDAG) (leafMaps : Array (HashMap VarType VarType))
   return (gd, keep)
 
 -- ============================================================
--- Reporting entry points
--- ============================================================
-
-/-- Analyse a circuit at the honest netlist level. -/
-def analyse (name : String) (gd : GlobalDAG) (searchBudget : Nat := 200000) : String :=
-  let (g, r) := automorphisms gd.circuit searchBudget
-  s!"=== {name} — netlist automorphisms ===\n" ++ ppReport g r
-
-/-- Analyse the relaxed (chain-contracted) circuit, then report which of the
-    *original* wires survive as the stable domain `D`.  This is the propose-and-
-    dispose pipeline of memo §6.5 in one call. -/
-def analyseRelaxed (name : String) (gd : GlobalDAG) (searchBudget : Nat := 200000) : String :=
-  let (rc, dropped) := contractAssoc gd.circuit
-  let (g, r) := automorphisms rc searchBudget
-  let head :=
-    s!"=== {name} — relaxed (chain-contracted) automorphisms ===\n" ++
-    s!"  contracted {dropped.size} association artefact(s): " ++
-      "{" ++ String.intercalate ", " dropped.toList ++ "}\n" ++
-    ppReport g r
-  if r.order == 1 then head
-  else
-    let lms := r.gens.map (leafMapOf g)
-    let (_, dom) := stableDomain gd lms
-    let total := gd.circuit.wireOrder.size
-    let outside := gd.circuit.wireOrder.filter (fun w => !dom.contains w)
-    head ++ s!"\n  stable domain D: {dom.size}/{total} wires\n" ++
-      "  outside D: {" ++ String.intercalate ", " outside.toList ++ "}"
-
--- ============================================================
--- SHARE-ATOMIC MODE
+-- SHARES AS ATOMS
 --
--- The leaf-level search above permutes DAG leaves, which caps share symmetry at
--- `(n-1)!`: with the canonical encoding, shares `0 … n-2` are bare random leaves
--- while share `n-1` is `x + Σ r`, so no leaf permutation can move the share that
--- carries the secret.  The 2-share DOM-AND is the minimal witness — it is rigid
--- at leaf level, yet swapping the two share *indices* is a genuine symmetry
--- (`u0↔u1`, `p01↔p10`, `c01↔c10`, `s0↔s1`).  On the leaves that map demands
--- `ra0 ↦ a + ra0`, an affine map, invisible to a graph search.
+-- Permuting the raw leaves of the DAG would cap share symmetry at `(n-1)!`: with
+-- the canonical encoding, shares `0 … n-2` are bare random leaves while share
+-- `n-1` is `x + Σ r`, so no leaf permutation can move the share that carries the
+-- secret.  The 2-share DOM-AND is the minimal witness: swapping the two share
+-- *indices* is a genuine symmetry (`u0↔u1`, `p01↔p10`, `c01↔c10`, `s0↔s1`), yet
+-- on the leaves it demands `ra0 ↦ a + ra0`, an affine map, invisible to a graph
+-- search.
 --
 -- Treating input shares as ATOMS removes the cap: the object being permuted is
 -- the share value, not the leaf encoding it, and the full `S_n` per sharing
--- becomes available.  The price is two side conditions that were free at leaf
--- level and must now be discharged mechanically:
+-- becomes available.  The price is two side conditions, discharged mechanically:
 --
 --   (S1) each sharing's joint distribution is invariant under reordering its
 --        shares.  True for the uniform XOR sharing, under all of `S_n`.
@@ -1059,14 +959,12 @@ def timed (f : Unit → String) : IO Unit := do
   IO.println ""
 
 def runDemo : IO Unit := do
-  -- the minimal witness that the two tiers differ
-  timed (fun _ => analyse       "domAND 2"       (demoDomAND 2))
+  -- the minimal witness that shares must be atoms
   timed (fun _ => analyseShares "domAND 2"       (demoDomAND 2))
-  -- leaf tier vs share tier, with and without chain contraction
+  -- with and without chain contraction
   timed (fun _ => analyseShares "domAND 3"       (demoDomAND 3))
   timed (fun _ => analyseShares "domAND 3"       (demoDomAND 3) true)
   timed (fun _ => analyseShares "domAND 5"       (demoDomAND 5) true)
-  timed (fun _ => analyse       "domKeccakChi 2" (demoKeccakChi 2))
   timed (fun _ => analyseShares "domKeccakChi 2" (demoKeccakChi 2))
   timed (fun _ => analyseShares "domKeccakChi 3" (demoKeccakChi 3) true)
 

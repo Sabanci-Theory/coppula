@@ -1,0 +1,138 @@
+Symmetry with shares as atoms only (2026-10-31, branch engine-speed).
+The raw-leaf group, the merge of two groups and SearchOpts.tier are gone; `symmetryOf` returns one group,
+trivial when (S1)/(S2) fail.  Earlier comparison of the variants: group-ablation_2026-10-31.txt.
+
+== Differential against the previous binary with `tier := 2` (atoms, leaves as fallback) ==
+43 distinct entries: root, engine calls, cells and verdict identical on 42.
+The exception is the one entry outside (S1)/(S2):
+  xy TI virtual variable: was group of order 2 on raw leaves, engine=5; now group off, engine=6; still S.
+
+== Golden baseline, against the previous default (both groups merged) ==
+E2E, GOLD and CELL lines: identical.  SYM lines: `groups=leaf a + share b` became `group=b`.
+All rootCheck and coverage audits pass.  Fields other than the label changed on 5 entries:
+  DOM AND (4 shares)       root 3461->3611, engine 35->38, cells 573->611
+  ISW refresh (4 shares)   root 160->220, engine unchanged, cells 29->12
+  xy TI virtual variable   engine 5->6
+  DOM Keccak χ (4 shares)  engine 576->579, cells 13373->13415
+  DOM AND (5 shares)       engine 243->239, cells 13715->12018
+
+== Timing (best of 3, setup included) ==
+CONTRACTION-TOTAL	suite	contract=true	verdicts=SSSSSISISSISISSSSSSSISSSSSSISSSSSSISSSSSI	engine=993	cells=16572	ms=127.2
+CONTRACTION-TOTAL	suite	contract=false	verdicts=SSSSSISISSISISSSSSSSISSSSSSISSSSSSISSSSSI	engine=1278	cells=14024	ms=121.8
+CONTRACTION-TOTAL	DOM Keccak χ (4 shares)	contract=true	verdicts=S	engine=579	cells=13415	ms=128.0
+CONTRACTION-TOTAL	DOM Keccak χ (4 shares)	contract=false	verdicts=S	engine=2989	cells=52359	ms=551.8
+CONTRACTION-TOTAL	DOM AND (5 shares)	contract=true	verdicts=S	engine=239	cells=12018	ms=64.7
+CONTRACTION-TOTAL	DOM AND (5 shares)	contract=false	verdicts=S	engine=843	cells=23160	ms=108.1
+PLAINROOT	DOM Keccak χ (4 shares)	engine=541	cells=61572	deep=5296	ms=413.9
+PLAINROOT	DOM AND (5 shares)	engine=251	cells=20708	deep=534	ms=84.1
+
+`bench` suite totals used to count the entries that are also in benchLarge twice (ISW-5, TI Fides);
+fixed.  Totals of the final binary: E2E 3271 ms, CELLS 126 ms, SYM 131 ms.
+
+== One process per gadget, best of 5, start-up 10.8 ms subtracted ==
+DOM Keccak χ (4 shares) 127.4 / DOM AND (5 shares) 68.5 / ISW AND (5 shares) 66.0
+DOM AND (4 shares) 8.2 / DOM Keccak χ (3 shares) 8.1 / TI Fides AB1 (4 shares) 25.6
+33 secure suite entries, best of 3 each, sum 170.6
+
+== bench cap ==
+CAP 600 DOM AND (4 shares): group=576 engine=37 cells=598 ms=47.3
+CAP 64  DOM AND (4 shares): group=24* engine=38 cells=611 ms=6.9
+CAP 600 DOM AND (5 shares): group=120* engine=174 cells=12555 ms=104.3
+CAP 64  DOM AND (5 shares): group=24* engine=239 cells=12018 ms=64.6
+CAP 24  DOM Keccak χ (4 shares): group=10* engine=1169 cells=22017 ms=209.2
+CAP 64  DOM Keccak χ (4 shares): group=30 engine=579 cells=13415 ms=130.2
+
+== bench groups-report 64 ==
+GR	ISW AND (2 shares)	survivorsNoImage=0	wires=8	absorbed=2	order:built=1 contracted=2	listed=2	valid%=87	dupWires=0	survivorsOutside=0	checks=ok
+GR	ISW AND (3 shares)	survivorsNoImage=0	wires=21	absorbed=9	order:built=1 contracted=2	listed=2	valid%=85	dupWires=0	survivorsOutside=0	checks=ok
+GR	ISW AND (4 shares)	survivorsNoImage=0	wires=40	absorbed=20	order:built=1 contracted=2	listed=2	valid%=85	dupWires=0	survivorsOutside=0	checks=ok
+GR	ISW AND (5 shares)	survivorsNoImage=0	wires=65	absorbed=35	order:built=1 contracted=2	listed=2	valid%=84	dupWires=0	survivorsOutside=0	checks=ok
+GR	DOM AND (2 shares)	survivorsNoImage=0	wires=8	absorbed=2	order:built=2 contracted=4	listed=4	valid%=83	dupWires=0	survivorsOutside=0	checks=ok
+GR	DOM AND (2 shares) o2	survivorsNoImage=0	wires=8	absorbed=2	order:built=2 contracted=4	listed=4	valid%=83	dupWires=0	survivorsOutside=0	checks=ok
+GR	DOM AND (3 shares)	survivorsNoImage=0	wires=21	absorbed=9	order:built=1 contracted=36	listed=36	valid%=68	dupWires=0	survivorsOutside=0	checks=ok
+GR	DOM AND (3 shares) o3	survivorsNoImage=0	wires=21	absorbed=9	order:built=1 contracted=36	listed=36	valid%=68	dupWires=0	survivorsOutside=0	checks=ok
+GR	DOM AND (4 shares)	survivorsNoImage=0	wires=40	absorbed=20	order:built=1 contracted=576	listed=24	valid%=86	dupWires=0	survivorsOutside=0	checks=ok
+GR	Trichina AND	survivorsNoImage=0	wires=9	absorbed=3	order:built=1 contracted=8	listed=8	valid%=71	dupWires=0	survivorsOutside=0	checks=ok
+GR	Trichina AND (bad assoc)	survivorsNoImage=0	wires=9	absorbed=3	order:built=1 contracted=8	listed=8	valid%=80	dupWires=0	survivorsOutside=0	checks=ok
+GR	TI AND (3 shares)	survivorsNoImage=0	wires=15	absorbed=3	order:built=3 contracted=6	listed=6	valid%=88	dupWires=0	survivorsOutside=0	checks=ok
+GR	TI AND (3 shares) o2	survivorsNoImage=0	wires=15	absorbed=3	order:built=3 contracted=6	listed=6	valid%=88	dupWires=0	survivorsOutside=0	checks=ok
+GR	Additive refresh (3 shares)	survivorsNoImage=0	wires=4	absorbed=1	order:built=1 contracted=2	listed=2	valid%=75	dupWires=0	survivorsOutside=0	checks=ok
+GR	Additive refresh (4 shares)	survivorsNoImage=0	wires=6	absorbed=2	order:built=1 contracted=6	listed=6	valid%=73	dupWires=0	survivorsOutside=0	checks=ok
+GR	ISW refresh (3 shares)	survivorsNoImage=0	wires=6	absorbed=3	order:built=1 contracted=6	listed=6	valid%=70	dupWires=0	survivorsOutside=0	checks=ok
+GR	ISW refresh (4 shares)	survivorsNoImage=0	wires=12	absorbed=8	order:built=1 contracted=24	listed=24	valid%=53	dupWires=0	survivorsOutside=0	checks=ok
+GR	DOM Keccak χ (2 shares)	survivorsNoImage=0	wires=55	absorbed=20	order:built=5 contracted=5	listed=5	valid%=100	dupWires=0	survivorsOutside=0	checks=ok
+GR	DOM Keccak χ (3 shares)	survivorsNoImage=0	wires=125	absorbed=60	order:built=5 contracted=10	listed=10	valid%=97	dupWires=0	survivorsOutside=0	checks=ok
+GR	TI Keccak χ (3 shares)	survivorsNoImage=0	wires=95	absorbed=30	order:built=5 contracted=5	listed=5	valid%=100	dupWires=0	survivorsOutside=0	checks=ok
+GR	TI Keccak χ (3 shares) o2	survivorsNoImage=0	wires=95	absorbed=30	order:built=5 contracted=5	listed=5	valid%=100	dupWires=0	survivorsOutside=0	checks=ok
+GR	Q⁴₁₂ (2-share direct)	survivorsNoImage=0	wires=30	absorbed=14	order:built=2 contracted=4	listed=3	valid%=46	dupWires=12	survivorsOutside=8	checks=ok
+GR	Q⁴₁₂ TI (3 shares)	survivorsNoImage=0	wires=45	absorbed=12	order:built=18 contracted=18	listed=18	valid%=100	dupWires=0	survivorsOutside=0	checks=ok
+GR	TI Fides AB1 (4 shares)	survivorsNoImage=0	wires=592	absorbed=412	order:built=2 contracted=2	listed=1	valid%=0	dupWires=28	survivorsOutside=2	checks=ok
+GR	x+yz TI direct (3 shares)	survivorsNoImage=0	wires=18	absorbed=6	order:built=3 contracted=6	listed=6	valid%=90	dupWires=0	survivorsOutside=0	checks=ok
+GR	x+yz TI with CT (3 shares)	survivorsNoImage=0	wires=18	absorbed=6	order:built=3 contracted=6	listed=6	valid%=90	dupWires=0	survivorsOutside=0	checks=ok
+GR	x+yz TI (4 shares)	survivorsNoImage=0	wires=33	absorbed=13	order:built=1 contracted=8	listed=8	valid%=73	dupWires=0	survivorsOutside=0	checks=ok
+GR	x+yz TI (4 shares) o3	survivorsNoImage=0	wires=33	absorbed=13	order:built=1 contracted=8	listed=8	valid%=73	dupWires=0	survivorsOutside=0	checks=ok
+GR	x+yz+xyz TI (4 shares)	survivorsNoImage=0	wires=90	absorbed=45	order:built=1 contracted=1	listed=1	valid%=0	dupWires=2	survivorsOutside=0	checks=ok
+GR	xy TI virtual variable	survivorsNoImage=0	wires=33	absorbed=15	order:built=0 contracted=0	listed=1	valid%=0	dupWires=0	survivorsOutside=0	checks=sharing [z1] carries 0 secrets ([]); expected exactly one — sharings m
+GR	xy TI virtual share	survivorsNoImage=0	wires=23	absorbed=9	order:built=1 contracted=2	listed=2	valid%=78	dupWires=0	survivorsOutside=0	checks=ok
+GR	xy TI 4to3 shares	survivorsNoImage=0	wires=17	absorbed=4	order:built=1 contracted=1	listed=1	valid%=0	dupWires=0	survivorsOutside=0	checks=ok
+GR	Q31 d+1	survivorsNoImage=0	wires=18	absorbed=8	order:built=2 contracted=4	listed=3	valid%=22	dupWires=12	survivorsOutside=8	checks=ok
+GR	Q32 d+1	survivorsNoImage=0	wires=26	absorbed=12	order:built=2 contracted=2	listed=2	valid%=69	dupWires=8	survivorsOutside=4	checks=ok
+GR	Q33 d+1	survivorsNoImage=0	wires=40	absorbed=22	order:built=2 contracted=2	listed=2	valid%=90	dupWires=4	survivorsOutside=2	checks=ok
+GR	Q44 d+1	survivorsNoImage=0	wires=22	absorbed=10	order:built=4 contracted=8	listed=5	valid%=18	dupWires=16	survivorsOutside=10	checks=ok
+GR	Q412 d+1	survivorsNoImage=0	wires=30	absorbed=14	order:built=4 contracted=4	listed=3	valid%=60	dupWires=12	survivorsOutside=6	checks=ok
+GR	Q4293 d+1	survivorsNoImage=0	wires=36	absorbed=16	order:built=2 contracted=2	listed=2	valid%=66	dupWires=12	survivorsOutside=6	checks=ok
+GR	Q4294 d+1	survivorsNoImage=0	wires=28	absorbed=12	order:built=2 contracted=4	listed=3	valid%=35	dupWires=16	survivorsOutside=10	checks=ok
+GR	Q4299 d+1	survivorsNoImage=0	wires=44	absorbed=24	order:built=2 contracted=2	listed=2	valid%=72	dupWires=12	survivorsOutside=2	checks=ok
+GR	Q4300 d+1	survivorsNoImage=0	wires=44	absorbed=24	order:built=4 contracted=4	listed=3	valid%=81	dupWires=8	survivorsOutside=4	checks=ok
+GR	DOM Keccak χ (4 shares)	survivorsNoImage=0	wires=225	absorbed=120	order:built=5 contracted=30	listed=30	valid%=93	dupWires=0	survivorsOutside=0	checks=ok
+GR	DOM AND (5 shares)	survivorsNoImage=0	wires=65	absorbed=35	order:built=1 contracted=14400	listed=24	valid%=87	dupWires=0	survivorsOutside=0	checks=ok
+GR	ISW AND (5 shares)	survivorsNoImage=0	wires=65	absorbed=35	order:built=1 contracted=2	listed=2	valid%=84	dupWires=0	survivorsOutside=0	checks=ok
+GR	TI Fides AB1 (4 shares)	survivorsNoImage=0	wires=592	absorbed=412	order:built=2 contracted=2	listed=1	valid%=0	dupWires=28	survivorsOutside=2	checks=ok
+
+== bench transport ==
+TRANSPORT	ISW AND (2 shares)	1	leaves=2^5	per-table budget=116509	group: elements=1 tested=13 violations=0	free relabellings: tested=12 violations=0	corrupted tables: 1/1 caught
+TRANSPORT	ISW AND (3 shares)	2	leaves=2^9	per-table budget=7282	group: elements=1 tested=683 violations=0	free relabellings: tested=304 violations=0	corrupted tables: 1/1 caught
+TRANSPORT	ISW AND (4 shares)	3	leaves=2^14	per-table budget=228	group: elements=1 tested=370 violations=0	free relabellings: tested=297 violations=0	corrupted tables: 1/1 caught
+TRANSPORT	ISW AND (5 shares)	skipped (too many leaves)
+TRANSPORT	DOM AND (2 shares)	1	leaves=2^5	per-table budget=95326	group: elements=3 tested=75 violations=0	free relabellings: tested=14 violations=0	corrupted tables: 3/3 caught
+TRANSPORT	DOM AND (2 shares) o2	2	leaves=2^5	per-table budget=95326	group: elements=3 tested=153 violations=0	free relabellings: tested=43 violations=0	corrupted tables: 3/3 caught
+TRANSPORT	DOM AND (3 shares)	2	leaves=2^9	per-table budget=1525	group: elements=35 tested=18090 violations=0	free relabellings: tested=381 violations=0	corrupted tables: 4/4 caught
+TRANSPORT	DOM AND (3 shares) o3	3	leaves=2^9	per-table budget=1525	group: elements=35 tested=48897 violations=0	free relabellings: tested=1595 violations=0	corrupted tables: 4/4 caught
+TRANSPORT	DOM AND (4 shares)	3	leaves=2^14	per-table budget=67	group: elements=23 tested=3075 violations=0	free relabellings: tested=88 violations=0	corrupted tables: 4/4 caught
+TRANSPORT	Trichina AND	1	leaves=2^5	per-table budget=69906	group: elements=7 tested=120 violations=0	free relabellings: tested=10 violations=0	corrupted tables: 4/4 caught
+TRANSPORT	Trichina AND (bad assoc)	1	leaves=2^5	per-table budget=69906	group: elements=7 tested=142 violations=0	free relabellings: tested=10 violations=0	corrupted tables: 4/4 caught
+TRANSPORT	TI AND (3 shares)	1	leaves=2^6	per-table budget=40330	group: elements=5 tested=453 violations=0	free relabellings: tested=30 violations=0	corrupted tables: 4/4 caught
+TRANSPORT	TI AND (3 shares) o2	2	leaves=2^6	per-table budget=40330	group: elements=5 tested=1943 violations=0	free relabellings: tested=207 violations=0	corrupted tables: 4/4 caught
+TRANSPORT	Additive refresh (3 shares)	2	leaves=2^5	per-table budget=116509	group: elements=1 tested=4 violations=0	free relabellings: tested=3 violations=0	corrupted tables: 0/1 caught
+TRANSPORT	Additive refresh (4 shares)	3	leaves=2^7	per-table budget=20165	group: elements=5 tested=43 violations=0	free relabellings: tested=4 violations=0	corrupted tables: 0/4 caught
+TRANSPORT	ISW refresh (3 shares)	2	leaves=2^6	per-table budget=40330	group: elements=5 tested=64 violations=0	free relabellings: tested=5 violations=0	corrupted tables: 3/4 caught
+TRANSPORT	ISW refresh (4 shares)	3	leaves=2^10	per-table budget=1058	group: elements=23 tested=1968 violations=0	free relabellings: tested=36 violations=0	corrupted tables: 4/4 caught
+TRANSPORT	DOM Keccak χ (2 shares)	1	leaves=2^15	per-table budget=86	group: elements=4 tested=564 violations=0	free relabellings: tested=15 violations=0	corrupted tables: 0/4 caught
+TRANSPORT	DOM Keccak χ (3 shares)	skipped (too many leaves)
+TRANSPORT	TI Keccak χ (3 shares)	1	leaves=2^15	per-table budget=86	group: elements=4 tested=688 violations=0	free relabellings: tested=45 violations=0	corrupted tables: 1/4 caught
+TRANSPORT	TI Keccak χ (3 shares) o2	2	leaves=2^15	per-table budget=86	group: elements=4 tested=688 violations=0	free relabellings: tested=70 violations=0	corrupted tables: 3/4 caught
+TRANSPORT	Q⁴₁₂ (2-share direct)	1	leaves=2^8	per-table budget=13108	group: elements=2 tested=210 violations=0	free relabellings: tested=68 violations=0	corrupted tables: 2/2 caught
+TRANSPORT	Q⁴₁₂ TI (3 shares)	1	leaves=2^12	per-table budget=328	group: elements=17 tested=4655 violations=0	free relabellings: tested=44 violations=0	corrupted tables: 4/4 caught
+TRANSPORT	TI Fides AB1 (4 shares)	skipped (too many leaves)
+TRANSPORT	x+yz TI direct (3 shares)	1	leaves=2^9	per-table budget=5042	group: elements=5 tested=657 violations=0	free relabellings: tested=30 violations=0	corrupted tables: 4/4 caught
+TRANSPORT	x+yz TI with CT (3 shares)	1	leaves=2^9	per-table budget=5042	group: elements=5 tested=657 violations=0	free relabellings: tested=30 violations=0	corrupted tables: 4/4 caught
+TRANSPORT	x+yz TI (4 shares)	2	leaves=2^12	per-table budget=547	group: elements=7 tested=4660 violations=0	free relabellings: tested=584 violations=0	corrupted tables: 4/4 caught
+TRANSPORT	x+yz TI (4 shares) o3	3	leaves=2^12	per-table budget=547	group: elements=7 tested=6741 violations=0	free relabellings: tested=721 violations=0	corrupted tables: 4/4 caught
+TRANSPORT	x+yz+xyz TI (4 shares)	1	leaves=2^12	per-table budget=911	group: elements=0 tested=0 violations=0	free relabellings: tested=163 violations=0	corrupted tables: 0/0 caught
+TRANSPORT	xy TI virtual variable	1	leaves=2^9	per-table budget=7282	group: elements=0 tested=0 violations=0	free relabellings: tested=0 violations=0	corrupted tables: 0/0 caught
+TRANSPORT	xy TI virtual share	1	leaves=2^7	per-table budget=29128	group: elements=1 tested=116 violations=0	free relabellings: tested=32 violations=0	corrupted tables: 1/1 caught
+TRANSPORT	xy TI 4to3 shares	1	leaves=2^8	per-table budget=14564	group: elements=0 tested=0 violations=0	free relabellings: tested=8 violations=0	corrupted tables: 0/0 caught
+TRANSPORT	Q31 d+1	1	leaves=2^6	per-table budget=52429	group: elements=2 tested=24 violations=0	free relabellings: tested=44 violations=0	corrupted tables: 1/2 caught
+TRANSPORT	Q32 d+1	1	leaves=2^6	per-table budget=58255	group: elements=1 tested=171 violations=0	free relabellings: tested=48 violations=0	corrupted tables: 1/1 caught
+TRANSPORT	Q33 d+1	1	leaves=2^6	per-table budget=58255	group: elements=1 tested=666 violations=0	free relabellings: tested=62 violations=0	corrupted tables: 1/1 caught
+TRANSPORT	Q44 d+1	1	leaves=2^8	per-table budget=10923	group: elements=4 tested=48 violations=0	free relabellings: tested=76 violations=0	corrupted tables: 2/4 caught
+TRANSPORT	Q412 d+1	1	leaves=2^8	per-table budget=13108	group: elements=2 tested=342 violations=0	free relabellings: tested=68 violations=0	corrupted tables: 2/2 caught
+TRANSPORT	Q4293 d+1	1	leaves=2^8	per-table budget=14564	group: elements=1 tested=300 violations=0	free relabellings: tested=86 violations=0	corrupted tables: 1/1 caught
+TRANSPORT	Q4294 d+1	1	leaves=2^8	per-table budget=13108	group: elements=2 tested=114 violations=0	free relabellings: tested=84 violations=0	corrupted tables: 2/2 caught
+TRANSPORT	Q4299 d+1	1	leaves=2^8	per-table budget=14564	group: elements=1 tested=528 violations=0	free relabellings: tested=92 violations=0	corrupted tables: 1/1 caught
+TRANSPORT	Q4300 d+1	1	leaves=2^8	per-table budget=13108	group: elements=2 tested=1332 violations=0	free relabellings: tested=78 violations=0	corrupted tables: 2/2 caught
+TRANSPORT	DOM Keccak χ (4 shares)	skipped (too many leaves)
+TRANSPORT	DOM AND (5 shares)	skipped (too many leaves)
+TRANSPORT	ISW AND (5 shares)	skipped (too many leaves)
+TRANSPORT	TI Fides AB1 (4 shares)	skipped (too many leaves)
+TRANSPORT-SUMMARY	group elements: tested=99254 violations=0	free relabellings: tested=5487 violations=0	corrupted tables caught=84/101	split-sharing swap maps v to w; distributions differ=true

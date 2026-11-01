@@ -42,7 +42,7 @@
 \title{Symmetric Cell Search for Probing Security\\[0.3em]
 \large How the verifier works, from the netlist to the verdict}
 \author{Working notes for the \code{engine-speed} branch}
-\date{29 October 2026}
+\date{31 October 2026}
 
 \begin{document}
 \maketitle
@@ -130,7 +130,7 @@ file & contents \\
 \code{Verif/ProbeClosure.lean} & split search (\code{checkDProbing}), \code{checkChosenCoupling}, \code{Stats}\\
 \code{Verif/CellSearch.lean} & cells, \code{childCells}, \code{SafeStore}, \code{visitCell}, \code{runCells}, audits\\
 \code{Verif/Automorphism.lean} & automorphism groups by individualisation--refinement, \code{contractAssoc}\\
-\code{Verif/Symmetry.lean} & groups $\to$ wire tables, orbital root, \code{planSymmetry}, \code{checkDProbingSym}\\
+\code{Verif/Symmetry.lean} & group $\to$ wire tables, orbital root, \code{planSymmetry}, \code{checkDProbingSym}\\
 \code{Main.lean} & gadget suite, \code{check}, \code{trace}, \code{golden}, \code{bench}\\
 \bottomrule
 \end{tabular}
@@ -307,13 +307,21 @@ Every safe set the search obtains is stored (\code{SafeStore}).  For every wire 
 keeps a bitset over the stored sets that contain it, so ``which stored sets contain all of
 the wires $O$?'' is the AND of $|O|$ bitsets (\lean{SafeStore.find}{CellSearch.lean}).
 Each stored set is also kept as a wire bitset, for choosing which one to split along.
-Two design choices distinguish this search from the classic split search of maskVerif and
-of \code{ProbeClosure.lean}:
+Two design choices distinguish this search from maskVerif and from the split search of
+\code{ProbeClosure.lean}.  Both were measured against their opposites
+(\code{lake exe verif bench ablate}, \code{results/search-ablation\_2026-10-30.txt}):
 \begin{itemize}[leftmargin=*]
-\item every certified probe set is extended over \emph{all} wires of the circuit, not only
-  the wires of the current cell, and the result is kept for the rest of the run;
-\item there is no ``union attempt'' (asking the engine to certify all wires of a cell at
-  once, which rarely succeeds and costs a large engine call).
+\item Every certified probe set is extended over \emph{all} wires of the circuit, not only
+  the wires of the current cell, and the result is kept for the rest of the run.  maskVerif
+  extends over the current cell and keeps nothing.  Limiting the extension to the cell raises
+  the suite from 989 to $23\,316$ engine calls and from 161 to 1\,342\,ms; only on TI Fides
+  AB1 at $d=1$ is it faster, 17 against 24\,ms, with the same number of engine calls.
+\item There is no \emph{union attempt} (asking the engine to certify all wires of a cell at
+  once).  Union attempts are not useless: they often succeed (93\,\% of the attempts on the
+  suite when made just before an engine call) and cut engine calls by up to a factor of 7.
+  They cost more than they save, though.  With our full engine the suite goes from 161 to
+  1\,732\,ms.  With the simple rule only, the form maskVerif uses at every cell, it goes to
+  211--235\,ms.
 \end{itemize}
 
 \subsection{Visiting a cell}
@@ -368,77 +376,298 @@ settles.
 \end{intuition}
 
 Without symmetry ($H=\emptyset$, root $\cellof{d}{W}$) this is
-\lean{checkDProbingCells}{CellSearch.lean}.  On the 41-entry suite it is 15 times faster than
-the split search (217\,ms against 3\,381\,ms), but Keccak $\chi$ with 4 shares still needs
-$14\,706$ engine calls and two seconds.  Symmetry removes most of these.
+\lean{checkDProbingCells}{CellSearch.lean}.  On the 41-entry suite it is 26 times faster than
+the split search (126\,ms against 3\,271\,ms), but Keccak $\chi$ with 4 shares still needs
+$14\,706$ engine calls and nearly two seconds.  Symmetry removes most of these.
 
 %======================================================================
 \section{Symmetry}\label{sec:symmetry}
 %======================================================================
 
-\subsection{Automorphisms and why they preserve safety}
+\subsection{What a symmetry renames: atoms}\label{sec:atoms}
 
-\begin{definition}[automorphism]
-A \emph{leaf relabelling} $\alpha$ is a bijection of the leaves that maps secrets to
-secrets, randoms to randoms and publics to publics.  It acts on expressions by renaming
-leaves.  It \emph{maps wire $w$ to wire $w'$} if relabelling the expression of $w$ gives
-exactly the expression of $w'$; where no wire computes the relabelled expression,
-$\alpha$ is \emph{not valid} on $w$.  An \emph{automorphism} is such an $\alpha$ together
-with its (partial, injective) action on the wires.
+A symmetry should say ``share 0 and share 1 play the same role''.  So what gets renamed has to
+be the shares themselves, not the leaves that their formulas happen to mention.  Take a 2-share
+sharing $a_0 = r_a$, $a_1 = a\oplus r_a$.  Exchanging the two shares cannot be written as a
+renaming of leaves: it would need $r_a\mapsto a\oplus r_a$.  Yet $(a_0,a_1)$ and $(a_1,a_0)$ have
+the same distribution: both are a uniform pair with XOR $a$.  The symmetry is present in the
+distribution and absent from the formula, because one share must be written down as the
+\emph{carrier} of the secret, although any other share could have played that role.
+
+So we stop looking inside the sharing.  The \emph{atoms} of a circuit are its input shares, its
+\emph{gadget randoms} (the randoms read by body wires) and its publics.  Every body wire is an
+expression over atoms (\lean{buildAtomicDAG}{Automorphism.lean}).  This hides the formula that
+names the carrier, and it needs two conditions, both checked on the original circuit
+(\lean{shareChecks}{Automorphism.lean}):
+\begin{description}[leftmargin=*,font=\normalfont]
+\item[(S1)] Each sharing of size $n$ is a uniform XOR sharing: $n-1$ bare fresh randoms and one
+  carrier $x\oplus\bigoplus r$ of exactly those randoms; sharings use disjoint randoms
+  (\code{sharingsOf}, \code{checkExchangeable}).
+\item[(S2)] No body wire reads a secret or an encoding random directly, so the body sees the
+  encoding only through the share values (\code{checkPrivateEncoding}).
+\end{description}
+A circuit that fails them gets no symmetry: its group is trivial, and the tool runs the cell
+search of \cref{sec:cells} from the single root cell.
+
+\begin{definition}[relabelling; automorphism]\label{def:relabelling}
+A \emph{relabelling} $\sigma$ is a bijection of the atoms that maps \emph{whole sharings onto
+whole sharings}, gadget randoms to gadget randoms and publics to publics.  It acts on expressions
+by renaming atoms.  It \emph{maps wire $w$ to wire $w'$} if relabelling the expression of $w$
+gives exactly the expression of $w'$; where no wire computes the relabelled expression, $\sigma$
+is \emph{not valid} on $w$.  An \emph{automorphism} is such a $\sigma$ together with its (partial,
+injective) action on the wires.
 \end{definition}
 
 \begin{theorem}[transport; memo Theorem 1]\label{thm:transport}
-If $\alpha$ is valid on every wire of $P$, then $\Sec(P) \iff \Sec(\alpha(P))$.
-In particular the image of a safe set under an automorphism is a safe set (restricted to
-the wires on which it is valid).
+Assume (S1) and (S2).  If $\sigma$ is valid on every wire of $P$, then
+$\Sec(P)\iff\Sec(\sigma(P))$.  In particular the image of a safe set under an automorphism is a
+safe set (restricted to the wires on which it is valid).
 \end{theorem}
-\begin{proof}[Proof sketch]
-The values of $\alpha(P)$ in an environment are the values of $P$ in the environment
-pulled back along $\alpha$.  Pulling back permutes the randoms --- a measure-preserving
-bijection --- and permutes the secrets, which only reindexes the quantifier ``for all
-values of the secrets''.  So the distribution of $[\![\alpha(P)]\!]$ is independent of the
-secrets iff that of $[\![P]\!]$ is.  The full proof is in
-\code{.ai/AUTOMORPHISM\_PLAN.md}, \S3.
+\begin{proof}
+By (S2) each body wire $w$ is a function $f_w$ of the share vector $x$, the gadget randoms $r$ and
+the publics.  Validity gives $f_{\sigma(w)}(x,r) = f_w(x\circ\sigma, r\circ\sigma)$ on $P$.  Fix
+the secrets $s$.  In $x\circ\sigma$, the block of sharing $k$ is a reordering of the block of
+sharing $\pi(k)$, where $\pi$ is the permutation of sharings induced by $\sigma$.  By (S1) that
+block is a uniform sharing of $s_{\pi(k)}$ whatever its order, and sharings are independent; the
+gadget randoms are permuted, which preserves their distribution, and permuting the publics only
+reindexes the quantifier over them.  So the distribution of $\sigma(P)$ under secrets $s$ equals
+that of $P$ under secrets $s\circ\pi$.  If the latter does not depend on the secrets, neither does
+the former; the converse uses $\sigma^{-1}$.
 \end{proof}
 
 \begin{remark}[one direction only]
-The engine is sound but not equivariant: it may certify $P$ and fail on $\alpha(P)$ (its
+The engine is sound but not equivariant: it may certify $P$ and fail on $\sigma(P)$ (its
 tie-breaking depends on node ids).  A \emph{failure} is therefore never transported; only
 safety is.
 \end{remark}
 
-\subsection{Where the automorphisms come from}
+\begin{remark}[whole sharings are a real hypothesis]\label{rem:wholesharings}
+An arbitrary bijection of atoms is \emph{not} safe.  With 2-share sharings of $a$ and $b$, the
+wires $v=a_0\oplus a_1$ and $w=a_0\oplus b_1$, and the swap $a_1\leftrightarrow b_1$, the wire map
+$v\mapsto w$ is perfect, yet $v$ equals the secret $a$ and $w$ is uniform.
+\end{remark}
 
-\lean{symmetriesOf}{Symmetry.lean} computes up to two groups:
-\begin{itemize}[leftmargin=*]
-\item \textbf{Leaf tier.}  Automorphisms of the circuit graph that permute leaves, found by
-  individualisation--refinement on a coloured graph \cite{McKayPiperno} and checked exactly
-  before they are accepted (\code{automorphisms} and \code{verifyMap} in
-  \code{Automorphism.lean}).
-\item \textbf{Share tier.}  Treating input shares as atoms, a permutation of the shares of
-  a secret is also a symmetry of the joint distribution, provided the sharing is uniform
-  and its randoms are used nowhere else.  These two conditions are checked mechanically
-  (\code{checkExchangeable}, \code{checkPrivateEncoding}); the tier is skipped when they
-  fail.  It sees more symmetry: the leaf tier cannot move the share that carries the
-  secret.
-\end{itemize}
-Both are computed on the \emph{chain-contracted} netlist (\lean{contractAssoc}{Automorphism.lean}),
-which merges $u_0\oplus c_{01}\oplus c_{02}$-style XOR chains into single gates.  The chain
-order breaks the share symmetry of DOM-AND completely (its as-built group is trivial), and
-the contraction recovers it; on the suite the contracted group always contains the as-built
-group.  The contracted circuit only \emph{proposes} symmetries: what is used is each
-element's action on the real wires, decided exactly by relabelling every wire's expression
-and looking up the resulting node (\lean{nameMap}{Symmetry.lean},
-\lean{WireTables.of}{Symmetry.lean}).  Chain intermediates such as $s_{0}m_{0}$ simply
-come out as ``not valid'' for many elements.
+\subsection{What the group acts on}
 
-The generators are closed into a list of group elements (\code{closeGroup}).  A group
-larger than a bound $B$ (default $64$, \code{defaultGroupCap}) is replaced by the largest
-closed subgroup of order at most $B$ found by adding generators one at a time
-(\code{closeIncremental}).  Any subgroup is sound; a smaller one costs less to set up and to
-look up through, and prunes less (\cref{sec:measure}).
+Two facts make the rest of this section fit together.
 
-Each element becomes a \emph{wire table}: an array giving, for each wire, its image, or
+\begin{intuition}
+\textbf{The group lives on the atoms.}  A group element renames atoms.  Its action on wires
+is derived from that, wire by wire, and may be undefined on some wires.  Composing, inverting
+and listing elements all happen on the atoms, where every element is a true permutation.
+
+\textbf{Transport looks only at the probe set.}  \Cref{thm:transport} asks that $\sigma$ be
+valid on the wires of $P$.  It says nothing about the other wires of the circuit, so $\sigma$
+does not have to be a symmetry of the whole circuit to be useful.
+\end{intuition}
+
+The classical notion, an automorphism of the netlist graph, is much stronger than we need: it
+must give an image to \emph{every} wire, so a single wire without an image rejects the whole
+relabelling.  What we want instead is relabellings that are valid on \emph{many} wires.
+
+\subsection{Chain contraction}\label{sec:contraction}
+
+The carrier was one accident of notation.  The bracketing of sums is the other.  A gate has two
+inputs, so the sum $u_2\oplus c_{20}\oplus c_{21}$ must be bracketed: the tool writes
+$s_2m_0 = u_2\oplus c_{20}$ and $s_2 = s_2m_0\oplus c_{21}$, though the other bracketing writes
+the same sum.  (The bracketing decides which intermediate wires exist, so it can affect security;
+see the remark below.)  \emph{Contraction} undoes this choice during the search for symmetries.
+The table gives the order of the group on the netlist as built and on the contracted netlist.
+\begin{center}\small
+\begin{tabular}{@{}lrr@{}}
+\toprule
+gadget & as built & contracted\\
+\midrule
+DOM-AND, 2 shares & 2 & 4\\
+DOM-AND, 3 shares & 1 & 36\\
+DOM-AND, 4 shares & 1 & 576\\
+DOM-AND, 5 shares & 1 & 14\,400\\
+DOM Keccak $\chi$, 3 shares & 5 & 10\\
+DOM Keccak $\chi$, 4 shares & 5 & 30\\
+TI-AND, 3 shares & 3 & 6\\
+ISW-AND, 5 shares & 1 & 2\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{The problem.}  Take DOM-AND with 3 shares and the relabelling $\tau$ that swaps share
+indices 0 and 1 ($a_0\leftrightarrow a_1$, $b_0\leftrightarrow b_1$,
+$r_{02}\leftrightarrow r_{12}$).  It sends $s_0\mapsto s_1$, $c_{01}\mapsto c_{10}$, and so on,
+and it fixes $s_2$, since it merely exchanges $c_{20}$ and $c_{21}$ inside the sum.  But
+$s_2m_0 = u_2\oplus c_{20}$ would become $u_2\oplus c_{21}$, and no wire computes that.  So
+$\tau$ is valid on 20 of the 21 wires, and a search for exact netlist automorphisms still
+rejects it because of the one remaining wire.  The same happens to every share permutation: the
+as-built group is trivial.
+
+Note that the wire $s_2m_0$ really has no partner.  This is not a defect of the search: probe
+sets containing $s_2m_0$ genuinely cannot be mapped by $\tau$.  The other 20 wires should not be
+made to suffer for it.
+
+\paragraph{The idea.}  Searching directly for the relabelling with the most valid wires is a
+hard, largest-common-subgraph style problem.  Contraction is a cheap substitute: hide the wires
+most likely to be in the way, search on what is left, and afterwards ask each hidden wire
+whether it has an image.
+
+\begin{definition}[contraction, \lean{contractAssoc}{Automorphism.lean}]
+A body wire is \emph{absorbed} if it is used by exactly one gate and that gate has the same
+operator; its inputs move into that gate, which becomes $n$-ary.  This is repeated until no such
+wire remains.  The other wires are the \emph{surviving} wires.
+\end{definition}
+
+In DOM-AND with 3 shares the 6 wires $c_{ij}$ and the 3 wires $s_im_0$ are absorbed, and 12
+wires survive: $u_i$, $p_{ij}$ and $s_i$, with for instance
+$s_0 = u_0\oplus p_{01}\oplus r_{01}\oplus p_{02}\oplus r_{02}$.  The contracted circuit is the
+same circuit with some inner points of its large sums left unnamed: \emph{it has exactly the
+same atoms}, and every surviving wire computes the same function.  (Only XOR-into-XOR and
+AND-into-AND are absorbed, since those operators are associative and commutative.)
+
+\paragraph{The pipeline.}
+\begin{center}
+\begin{tikzpicture}[box/.style={draw,rounded corners=2pt,align=center,inner sep=5pt,font=\small},
+  arr/.style={-{Latex[length=2mm]}},lab/.style={font=\footnotesize,above}]
+\node[box] (c) {real circuit\\21 wires};
+\node[box,right=24mm of c] (k) {contracted circuit\\12 wires};
+\node[box,right=24mm of k] (a) {relabelling $\sigma$\\of the atoms};
+\node[box,below=11mm of k] (t) {wire table of $\sigma$: for each of the 21 real wires,\\its image, or ``not valid''};
+\draw[arr] (c) -- node[lab]{contract} (k);
+\draw[arr] (k) -- node[lab]{search} (a);
+\draw[arr] (c) |- (t);
+\draw[arr] (a) |- (t);
+\node[font=\footnotesize,below=0.5mm of a,xshift=-24mm,anchor=north] {proposal, not trusted};
+\node[font=\footnotesize,below=0.5mm of t] {exact: relabel each expression and look it up};
+\end{tikzpicture}
+\end{center}
+\begin{enumerate}[leftmargin=*]
+\item \textbf{Propose.}  Search for automorphisms of the contracted netlist.  Each one is a pair:
+  a relabelling $\sigma$ and a map $\phi$ on the surviving wires.
+\item \textbf{Keep only $\sigma$.}  The map $\phi$ is thrown away (\code{atomicLeafMap}).  Nothing
+  has to be ``brought back'' to the original circuit: $\sigma$ renames atoms, and the original
+  circuit has the same atoms.
+\item \textbf{Dispose.}  For every real wire $w$, relabel the expression of $w$ and look the
+  result up among the real wires (\lean{nameMap}{Symmetry.lean}).  A hit gives the image of
+  $w$; no hit means $\sigma$ is not valid on $w$ (\lean{WireTables.of}{Symmetry.lean}).
+\end{enumerate}
+For $\tau$ this returns images for all 12 surviving wires and for 8 of the 9 absorbed ones,
+for example $c_{02}\mapsto c_{12}$ and $s_0m_0\mapsto s_1m_0$, and ``not valid'' on $s_2m_0$.
+For the relabelling that swaps only $b_0\leftrightarrow b_1$, it returns images for 16 wires:
+$u_0\mapsto p_{01}$, $p_{20}\mapsto p_{21}$, and $s_0\mapsto s_0$ (the sum
+$a_0\cdot(b_0\oplus b_1\oplus b_2)\oplus r_{01}\oplus r_{02}$ does not change), and ``not valid''
+on $c_{01},c_{10},c_{20},c_{21},s_2m_0$.
+
+\paragraph{Soundness.}  Contraction is not part of the soundness argument at all:
+
+\begin{theorem}[the proposal is not trusted]\label{thm:proposal}
+Let $\sigma$ be \emph{any} relabelling in the sense of \cref{def:relabelling}, wherever it came
+from, and let $h_\sigma$ be its wire table on the real circuit.  Then \cref{thm:transport} holds
+for $h_\sigma$ on every probe set in its valid part.
+\end{theorem}
+\begin{proof}
+\Cref{thm:transport} has two hypotheses: $\sigma$ is a relabelling, and for each $w\in P$ the
+relabelled expression of $w$ is the expression of $h_\sigma(w)$.  The second is what
+\code{nameMap} tests, on the real circuit's expressions.  Neither hypothesis mentions a
+contracted circuit, a graph or a search.
+\end{proof}
+
+The one thing the search has to deliver is therefore that $\sigma$ is a relabelling, which
+\cref{rem:wholesharings} shows is not automatic.  It is enforced exactly: the search graph has one
+extra vertex per sharing, joined to its shares (\code{buildShareGraph}), and \code{verifyMap}
+accepts a candidate only if these edges are preserved.  Contraction does not touch input shares,
+so these vertices are the same in the contracted graph, and composing relabellings gives a
+relabelling.
+
+If contraction were wrong, or replaced by a random guess of a relabelling, the only effect would be
+tables with few valid entries, hence less pruning.  The contracted circuit is a heuristic that
+decides \emph{which} relabellings get tried; it never decides whether one is correct.  Contraction
+also gives two guarantees of quality:
+
+\begin{remark}[absorbed wires are still probed]
+Contraction affects only the symmetry proposal.  The search runs over all real wires, so an absorbed
+wire remains a probe position, covered by the engine or by a table that is valid on it.  This is
+essential, because contraction does not preserve security.  \emph{Trichina AND} and \emph{Trichina
+AND (bad assoc)} differ only in the bracketing of one sum, and they contract to the \emph{identical}
+circuit (\code{bench trichina}), with $c_1 = a_0b_0\oplus a_0b_1\oplus a_1b_0\oplus a_1b_1\oplus r$.
+The first is secure.  The second is insecure, because its absorbed wire
+$t_3 = a_0b_0\oplus a_0b_1\oplus a_1b_0\oplus a_1b_1$ equals $ab$ unmasked.  The tool rejects it,
+because $t_3$ was never dropped from the search.
+\end{remark}
+
+\begin{lemma}[contraction loses nothing]\label{lem:contract}
+\begin{enumerate}[label=(\alph*),leftmargin=*,nosep]
+\item Every automorphism of the as-built netlist induces one of the contracted netlist with the
+  same relabelling.  So contraction can only enlarge the group.
+\item If $(\sigma,\phi)$ is an automorphism of the contracted netlist, then $\sigma$ sends the
+  expression of each surviving wire $w$ to the expression of $\phi(w)$.  So only absorbed wires
+  can lose their image.
+\end{enumerate}
+\end{lemma}
+\begin{proof}
+(a) ``Used once, by a gate with the same operator'' is a property that automorphisms preserve,
+so an automorphism permutes the absorbed wires.  It therefore maps the flattened inputs of a
+surviving gate to the flattened inputs of its image.  (b) By induction along the contracted
+gates: the expression of $w$ is its operator applied to the expressions of its inputs, and
+$\phi$ preserves both.
+\end{proof}
+
+Both hold on the whole suite: every as-built order divides the contracted order, and under every
+listed element, every surviving wire goes to an expression that some wire computes.  The tables
+are stricter than this in one respect: they also refuse a wire whose expression, or whose image's
+expression, is shared with another wire, because a relabelling is not a permutation there
+(\code{dup} in \code{WireTables.of}).
+
+\subsection{Why atoms and not raw leaves}\label{sec:whyatoms}
+
+One could avoid (S1) and (S2) by searching for renamings of the raw leaves of the formulas.  Such a
+renaming needs no assumption on the encoding, but it can never move a carrier, and that is all it
+gives up and all that separates it from the group above:
+
+\begin{lemma}[raw leaves keep the carriers]\label{lem:carriers}
+Assume (S1) and (S2).  The automorphisms that rename raw leaves are exactly the elements of the
+group of relabellings that send carriers to carriers.  In particular, their number is the order
+of the group divided by the size of the orbit of the set of carriers.
+\end{lemma}
+\begin{proof}
+An automorphism on raw leaves preserves input shares, and it preserves ``two shares have a common
+encoding random'', hence sharings and carriers; by (S2) encoding randoms are exactly the randoms
+read by input shares, so gadget randoms go to gadget randoms.  So it restricts to a relabelling
+that keeps the carriers.  Conversely, a relabelling keeping the carriers lifts to the leaves:
+send the random of a bare share to the random of its image, and each secret to the secret of the
+image sharing.  The carrier formula is preserved, because it is the secret plus all randoms of
+its sharing.
+\end{proof}
+
+In DOM-AND with 3 shares the group is $S_3\times S_3$, of order 36; keeping $a_2$ and $b_2$ in
+place leaves $2\times 2=4$.  Likewise $576/16 = 36$ with 4 shares and $14\,400/25=576$ with 5.
+So renaming raw leaves adds nothing where (S1) and (S2) hold.  The comparison below shows what it
+loses (\code{lake exe verif bench contraction}, time in ms and engine calls, setup included; the
+last row was measured on the version of the code that still had the raw-leaf search,
+\code{results/group-ablation\_2026-10-31.txt}):
+\begin{center}\small
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+ & \multicolumn{2}{c}{41-entry suite} & \multicolumn{2}{c}{Keccak $\chi$, 4 shares} & \multicolumn{2}{c}{DOM-AND, 5 shares}\\
+symmetry used & ms & engine & ms & engine & ms & engine\\
+\midrule
+atoms, contracted (the tool) & 127 & 993 & 128 & 579 & 65 & 239\\
+atoms, as built & 122 & 1\,278 & 552 & 2\,989 & 108 & 843\\
+raw leaves, contracted & 132 & 1\,199 & 389 & 2\,303 & 99 & 435\\
+\bottomrule
+\end{tabular}
+\end{center}
+Verdicts are identical in all rows.  Differences of a few ms on the suite are noise: it is dominated
+by small gadgets, where symmetry hardly changes the running time.  On Keccak $\chi$ with 4 shares,
+atoms take a third of the time of raw leaves, and contraction takes a quarter of the time of the
+as-built netlist, where the group shrinks from 30 to 5.
+
+\subsection{From generators to wire tables}
+
+The generators are closed into a list of group elements (\code{closeGroup}).  Closure happens on
+the atoms, so no partial wire maps are ever composed; each listed element gets its own wire table
+by \cref{thm:proposal}'s exact test.  A group larger than a bound $B$ (default $64$,
+\code{defaultGroupCap}) is replaced by the largest closed subgroup of order at most $B$ found by
+adding generators one at a time (\code{closeIncremental}).  Any subgroup is sound; a smaller one
+costs less to set up and to look up through, and prunes less (\cref{sec:measure}).
+
+Each element thus becomes a \emph{wire table}: an array giving, for each wire, its image, or
 ``not valid''.  Tables are injective where valid, so inverses exist
 (\lean{invertTable}{Symmetry.lean}).
 
@@ -488,8 +717,8 @@ the group order.
 
 Dominance removes engine calls, but the search still \emph{visits} cells for probe sets
 whose symmetric images were already handled.  On Keccak $\chi$ with 4 shares, searching
-from the single root cell with dominance lookups visits $60\,478$ cells and takes 430\,ms;
-starting from the orbital root it visits $13\,373$ cells and takes 140\,ms.  This section
+from the single root cell with dominance lookups visits $61\,572$ cells and takes 414\,ms;
+starting from the orbital root it visits $13\,415$ cells and takes 130\,ms.  This section
 explains what the orbital root is and why it has its shape.
 
 \subsection{The goal, and why not canonical forms}
@@ -619,7 +848,7 @@ handled in three steps (\lean{looseClass}{Symmetry.lean}):
 \item the remaining loose wires form plain cells: $j$ of them, and $d-j$ wires of $D$.
 \end{enumerate}
 In DOM-AND with 3 shares the products $u_i,p_{ij}$ and the outputs $s_i$ form the stable
-domain of the share group; the masked terms $c_{ij}$ are loose but have a subgroup that
+domain of the group; the masked terms $c_{ij}$ are loose but have a subgroup that
 permutes them; the chain intermediates $s_im_0$ are loose with small stabilisers.  The
 resulting root is listed in \cref{sec:example}.
 
@@ -662,7 +891,7 @@ Orbital branching and dominance are complementary.  Orbital branching decides, b
 search starts and without looking at any probe set, which blocks need to be searched at
 all; it cannot see the duplicates that remain inside the blocks (\cref{ex:c3}).  Dominance
 sees exactly those, one seed at a time, but only after the search has reached them.
-Measured on Keccak $\chi$ with 4 shares: dominance alone 430\,ms, both 140\,ms.
+Measured on Keccak $\chi$ with 4 shares: dominance alone 414\,ms, both 130\,ms.
 \end{intuition}
 
 %======================================================================
@@ -673,9 +902,9 @@ Measured on Keccak $\chi$ with 4 shares: dominance alone 430\,ms, both 140\,ms.
 \caption{Symmetric cell search (\lean{checkDProbingSym}{Symmetry.lean})}\label{alg:full}
 \begin{algorithmic}[1]
 \Require circuit with body wires $W$, order $d$
-\State groups $\gets$ leaf tier and share tier of the chain-contracted netlist, each closed and bounded by $B$
-\State $H\gets$ all non-identity elements, as forward and inverse wire tables
-\State roots $\gets$ the orbital root of whichever group gives the fewer probe sets
+\State $G\gets$ relabellings of the atoms, found on the chain-contracted netlist (\cref{sec:contraction}), closed and bounded by $B$; trivial if (S1) or (S2) fails
+\State $H\gets$ all non-identity elements of $G$, as forward and inverse wire tables
+\State roots $\gets$ the orbital root of $G$
 \State stack $\gets$ roots; $\mathcal S\gets\emptyset$
 \While{stack not empty}
   \State pop a cell and visit it (\cref{alg:visit}); on INSECURE stop
@@ -704,7 +933,7 @@ built as chains $s_im_0 = u_i\oplus c_{i\cdot}$, $s_i = s_im_0\oplus c_{i\cdot}$
 There are $\binom{21}{2}=210$ pairs.  The output below is from
 \code{lake exe verif trace "DOM AND (3 shares)"}.
 
-\paragraph{Symmetry.}  Leaf tier of order 4; share tier of order $36 = 3!\cdot 3!$ (the
+\paragraph{Symmetry.}  A group of order $36 = 3!\cdot 3!$ (the
 shares of $a$ and the shares of $b$ permuted independently; most elements are valid on only
 part of the wires); 35 distinct non-identity automorphisms for the lookups.  A typical element swaps share indices 0 and 1:
 $u_0\leftrightarrow u_1$, $p_{01}\leftrightarrow p_{10}$, $c_{02}\leftrightarrow c_{12}$,
@@ -744,8 +973,9 @@ step & what happens \\
     $\{u_0,u_1,p_{01},p_{10},c_{01},c_{10},s_0m_0,s_1m_0\}$, stored.\\
 2--3 & $\{u_0,p_{01}\}$ and $\{u_0,p_{10}\}$: skipped, inside that set.\\
 4 & $\{u_0,s_1\}$: engine; stores $\{u_0,s_1,u_1,p_{01},p_{10}\}$.\\
-5 & $\{u_0,s_0\}$: \emph{dominance} --- swapping share indices 0 and 1 maps $\{u_0,s_0\}$ to
-    $\{u_1,s_1\}$, inside the set of step 4; the image $\{u_0,u_1,p_{01},p_{10},s_0\}$ is
+5 & $\{u_0,s_0\}$: \emph{dominance} --- the relabelling that cycles the shares of $a$
+    ($a_0\mapsto a_2\mapsto a_1\mapsto a_0$) and leaves those of $b$ alone maps $\{p_{10},s_1\}$,
+    inside the set of step 4, to $\{u_0,s_0\}$; the image $\{u_0,p_{01},p_{20},p_{21},s_0\}$ is
     stored.  No engine call.\\
 6 & $\{s_0,s_1\}$: engine; stores $\{s_0,s_1,u_0,u_1,p_{01},p_{10}\}$.\\
 7 & the $c_{01}$ cell (17 pairs): its seed $\{c_{01},c_{10}\}$ is inside the set of step 1;
@@ -781,6 +1011,24 @@ It records:
 \item the one-pass \code{contractAssoc} against its step-by-step definition
   (\code{golden contract}).
 \end{itemize}
+One further check, \code{bench transport}, is run by hand because it is slow.  It tests the
+property that all uses of symmetry rest on, sharing nothing with the code under test: it evaluates
+the raw netlist on every assignment of the leaves, with no DAG and no interning, and compares the
+conditional distributions of a probe set and of its image.  It covers the 38 entries with at most
+18 leaves, at probe sizes $d$ and $d+1$ (so that insecure sets are included), enumerating where
+the budget allows and sampling otherwise:
+\begin{itemize}[leftmargin=*]
+\item all listed group elements: 99\,254 probe sets, no violation;
+\item free relabellings (swaps of two shares of a sharing, of two gadget randoms, or of two whole
+  sharings, from no search at all, as in \cref{thm:proposal}): 5\,487 non-trivial probe sets, no
+  violation;
+\item corrupted tables (two images exchanged): caught in 84 of 101 cases, so the check has
+  teeth; the other 17 went undetected on the probe sets tried, for instance because the exchanged
+  images have the same distribution;
+\item the swap $a_1\leftrightarrow b_1$ of \cref{rem:wholesharings}: the wire map
+  $v\mapsto w$ is produced and the distributions differ, as predicted.
+\end{itemize}
+The five gadgets with more than 18 leaves are out of reach of this check.
 The two audits re-check, independently of the search's own bookkeeping, the two facts its
 soundness rests on (\cref{thm:cells,thm:root}).  Safety of each stored set itself rests on the
 engine and \cref{thm:extension,thm:transport}.
@@ -789,8 +1037,9 @@ engine and \cref{thm:extension,thm:transport}.
 \section{Measurements}\label{sec:measure}
 %======================================================================
 
-All figures are from 28--29 October 2026 on one desktop machine under light background load
-($\pm 20\,\%$); details in \code{lean\_ffi/verif/results/}.
+All figures are from 31 October 2026, except the maskVerif column below (28 October), on one
+desktop machine under light background load ($\pm 20\,\%$); details in
+\code{lean\_ffi/verif/results/}.
 
 \paragraph{What each idea contributes} (milliseconds, in process, setup included):
 \begin{center}\small
@@ -798,34 +1047,35 @@ All figures are from 28--29 October 2026 on one desktop machine under light back
 \toprule
  & \shortstack{split\\search} & \shortstack{cells,\\no symmetry} & \shortstack{cells +\\dominance only} & \shortstack{full\\(Alg.~\ref{alg:full})}\\
 \midrule
-41-entry suite (sum) & 3\,381 & 217 & --- & 246\\
-DOM Keccak $\chi$, 4 shares, $d=3$ & $>25$\,min$^\ast$ & 1\,981 & 430 & 140\\
-DOM-AND, 5 shares, $d=4$ & --- & 119 & 240$^\dagger$ & 90\\
-ISW-AND, 5 shares, $d=4$ & 586 & 62 & --- & 71\\
+41-entry suite (sum) & 3\,271 & 126 & --- & 131\\
+DOM Keccak $\chi$, 4 shares, $d=3$ & $>25$\,min$^\ast$ & 1\,885 & 414 & 130\\
+DOM-AND, 5 shares, $d=4$ & --- & 110 & 84 & 65\\
+ISW-AND, 5 shares, $d=4$ & 563 & 59 & --- & 66\\
 \bottomrule
 \end{tabular}\\[2pt]
-{\footnotesize $^\ast$ before the engine changes. $^\dagger$ with groups bounded at 600 instead of 64.}
+{\footnotesize $^\ast$ before the engine changes.}
 \end{center}
 
 \paragraph{The group bound.}  Groups of order 576 and more (DOM-AND with 4 and 5 shares)
-cost more to list, tabulate, branch on and look up through than they save: at bound 600
-DOM-AND-5 takes 203\,ms, at 64 it takes 84--90\,ms.  Keccak $\chi$ (orders 10 and 30) is
-unaffected at 64 and loses 40\,\% at 24.
+cost more to list, tabulate, branch on and look up through than they save.  DOM-AND-4 takes
+47\,ms at bound 600, where its whole group fits, and 7\,ms at 64, for one more engine call;
+DOM-AND-5 takes 104\,ms at 600 and 65\,ms at 64.  Keccak $\chi$ with 4 shares (order 30) is
+unaffected at 64 and takes 60\,\% longer at 24.
 
-\paragraph{Against maskVerif} (one process per gadget, best of 3, each tool's start-up time
+\paragraph{Against maskVerif} (one process per gadget, best of 3 to 5, each tool's start-up time
 subtracted; \code{results/maskverif-comparison\_2026-10-28.md}):
 \begin{center}\small
 \begin{tabular}{@{}lrr@{}}
 \toprule
 gadget & maskVerif [ms] & this tool [ms]\\
 \midrule
-DOM Keccak $\chi$, 4 shares, $d=3$ & 426 & 140\\
-DOM-AND, 5 shares, $d=4$ & 371 & 85\\
+DOM Keccak $\chi$, 4 shares, $d=3$ & 426 & 127\\
+DOM-AND, 5 shares, $d=4$ & 371 & 69\\
 ISW-AND, 5 shares, $d=4$ & 213 & 66\\
-DOM-AND, 4 shares, $d=3$ & 27 & 11\\
+DOM-AND, 4 shares, $d=3$ & 27 & 8\\
 DOM Keccak $\chi$, 3 shares, $d=2$ & 18 & 8\\
 TI Fides AB1, $d=1$ & 12 & 26\\
-33 secure suite entries (sum) & 331 & 156\\
+33 secure suite entries (sum) & 331 & 171\\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -842,14 +1092,25 @@ and randoms (275 against 225 positions on Keccak $\chi$ with 4 shares).
 \item \textbf{Not one representative per orbit.}  The root leaves duplicates whenever a
   probe set meets its first orbit twice (\cref{ex:c3}) or the stabilisers are small; dominance
   removes them later, at the cost of a lookup.
+\item \textbf{Inputs outside (S1) and (S2).}  Such a circuit gets no symmetry, which is sound but
+  slower.  One entry of the suite is affected, \emph{xy TI virtual variable}, whose inputs
+  $z_1,z_2,z_3$ are three fresh randoms with no secret, which \code{sharingsOf} does not accept as
+  a sharing (6 engine calls instead of 5).  Renaming raw leaves (\cref{sec:whyatoms}) needs neither
+  condition and could be added as a fallback.
+\item \textbf{Choice of subgroup.}  Above the bound $B$ the group is reduced greedily.  For DOM-AND
+  with 4 shares this gives order 24, although the carrier-keeping subgroup of order 36 also fits
+  and gives a slightly smaller root (3\,461 against 3\,611 probe sets, 35 against 38 engine calls,
+  no gain in time).
 \item \textbf{Partial symmetry.}  The loose-wire construction is a heuristic choice of
   subgroups; its correctness is checked by \code{rootCheck}, not proved in Lean.
 \item \textbf{TI Fides AB1.}  Its couplings relabel the input-encoding randoms, which almost
-  every wire depends on, so nearly every candidate needs the slow path of the extension.
+  every wire depends on, so nearly every candidate needs the slow path of the extension.  It also
+  has no usable symmetry: the wire tables of its group of order 2 move no wire.
 \item \textbf{Model.}  Value-based probing only; glitches and transitions are out of scope.
   Symmetry is cheaper to use in this model, because two wires with the same value function are
   interchangeable.
-\item \textbf{Proof status.}  \Cref{thm:transport,thm:extension} are argued in the design memo;
+\item \textbf{Proof status.}  \Cref{thm:extension} is argued in the design memo,
+  and \cref{thm:transport,thm:proposal,lem:contract,lem:carriers} in these notes;
   the Lean formalisation on the \code{formally-verified} branch covers the engine and the
   split search, not the cell search or the symmetry.
 \end{itemize}

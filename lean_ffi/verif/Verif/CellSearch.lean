@@ -204,9 +204,26 @@ structure CellCounters where
   covers   : Nat := 0   -- seeds covered by a stored set (no engine call)
   deep     : Nat := 0   -- of which only through an automorphism
   engine   : Nat := 0   -- engine calls on seeds
+  unions   : Nat := 0   -- union attempts (ablation only)
+  unionsOk : Nat := 0   -- of which certified
   deriving Repr, Inhabited
 
+/-- Search variants, for ablation; the defaults are the search as designed.
+    * `extendAll := false`: extend a certified seed over the wires of the current
+      cell only, instead of all wires.
+    * `union`: ask the verdict-only engine to certify all wires of a cell at once —
+      `0` never, `1` just before an engine call on the seed, `2` at every cell;
+      `3` and `4` are `1` and `2` with the simple rule only (`rewriteLoop`, no
+      factoring and no general rule), which is maskVerif's form of the attempt.
+    * `contract`: search for symmetries on the chain-contracted netlist. -/
+structure SearchOpts where
+  extendAll : Bool := true
+  union     : Nat := 0
+  contract  : Bool := true
+  deriving Inhabited
+
 structure CellEnv where
+  opts        : SearchOpts := {}
   fw          : HashMap String NodeId
   ws          : Array String
   pos         : HashMap String Nat
@@ -257,6 +274,18 @@ def findThroughSymmetry (env : CellEnv) (store : SafeStore) (seed : Array Nat) (
     return some best
   return none
 
+/-- Union attempt: certify every wire of the cell at once.  A success makes the
+    wires of the cell one safe set, so the cell is finished. -/
+def tryUnion (env : CellEnv) (g : GlobalDAG) (cnt : CellCounters) (all : Array Nat)
+    : GlobalDAG × CellCounters × Bool :=
+  let ids := all.map (fun w => env.fw[env.ws[w]!]!)
+  let (g, sec) := if env.opts.union ≥ 3 then
+      let (g, ps) := initProbeByIds g ids
+      let (g, _, sec) := rewriteLoop g ps
+      (g, sec)
+    else checkProbeRoots g ids env.allowFactor
+  (g, { cnt with unions := cnt.unions + 1, unionsOk := cnt.unionsOk + (if sec then 1 else 0) }, sec)
+
 /-- One visit to a cell: the new state, a counterexample if the engine failed
     on the cell's seed, and the child cells.
 
@@ -278,8 +307,11 @@ def visitCell (env : CellEnv) (s : CellState) (cell : Cell)
   if all.size ≤ store.maxSize && !(store.find all 1).isEmpty then
     ({ g, stats, store, cnt := { cnt with skips := cnt.skips + 1 } }, none, #[])
   else
-  let allM := WireMask.ofArray n all
   let seed := cell.foldl (fun acc (c, ws) => acc ++ ws.extract 0 c) #[]
+  let (g, cnt, uOk) :=
+    if (env.opts.union == 2 || env.opts.union == 4) && all.size > seed.size then tryUnion env g cnt all else (g, cnt, false)
+  if uOk then ({ g, stats, store := store.add env.look all, cnt }, none, #[]) else
+  let allM := WireMask.ofArray n all
   let hits := store.find seed 8
   if !hits.isEmpty then
     let kids := childCells cell (bestCover store hits allM)
@@ -294,12 +326,17 @@ def visitCell (env : CellEnv) (s : CellState) (cell : Cell)
     let kids := childCells cell m
     ({ g, stats, store, cnt }, none, kids)
   | none =>
+    let (g, cnt, uOk) :=
+      if (env.opts.union == 1 || env.opts.union == 3) && all.size > seed.size then tryUnion env g cnt all else (g, cnt, false)
+    if uOk then ({ g, stats, store := store.add env.look all, cnt }, none, #[]) else
     let names := seed.map (env.ws[·]!)
     let (g, sec, coupling, stats) := checkChosenCoupling g env.fw stats names env.allowFactor
     let cnt := { cnt with engine := cnt.engine + 1 }
     if !sec then ({ g, stats, store, cnt }, some names, #[])
     else
-      let (g, safe, anf) := couplingExtend g coupling names env.cands
+      let cands := if env.opts.extendAll then env.cands
+        else all.map (fun w => (env.ws[w]!, env.fw[env.ws[w]!]!))
+      let (g, safe, anf) := couplingExtend g coupling names cands
       let S := safe.filterMap (env.pos[·]?)
       -- (no `recordExtension`: its collision report keys every safe set by a
       -- sorted string, which costs more than the lookup itself here)
@@ -331,8 +368,8 @@ def CellEnv.of (g : GlobalDAG) (look : Relabellings) (allowFactor : Bool := true
     Same verdicts as `checkDProbing` (both are sound; they may name different
     counterexamples). -/
 def checkDProbingCells (g : GlobalDAG) (probingOrder : Nat) (allowFactor : Bool := true)
-    : GlobalDAG × CellState × CheckResult :=
-  let env := CellEnv.of g (identityLook g.circuit.wireOrder.size) allowFactor
+    (opts : SearchOpts := {}) : GlobalDAG × CellState × CheckResult :=
+  let env := { CellEnv.of g (identityLook g.circuit.wireOrder.size) allowFactor with opts }
   let root : Cell := #[(probingOrder, Array.range env.ws.size)]
   let (s, r) := runCells env g #[root]
   (s.g, s, r)

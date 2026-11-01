@@ -1,0 +1,356 @@
+# Groups used by the symmetric search: leaf vs share atoms, contraction, brute-force transport
+# Commands (in lean_ffi/verif): bench groups-report 20000; bench tier all <tier> <contract>; bench transport; bench trichina
+# tier 0 = both groups (default), 1 = leaf only, 2 = share only where its checks hold, else leaf.
+# Timing: best of 3, setup included, idle machine, 2026-10-31.
+
+## bench groups-report 20000
+# survivorsNoImage = surviving wires with no image under some listed element (leaf/share)
+# keepCarriers = share elements that send secret-carrying shares to secret-carrying shares
+ISW AND (2 shares)	survivorsNoImage=0/0	wires=8	absorbed=2	built:leaf=1 share=1	contracted:leaf=2 share=2	listed:leaf=2 share=2	valid%:leaf=87 share=87	leafOnly=0	keepCarriers=2	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+ISW AND (3 shares)	survivorsNoImage=0/0	wires=21	absorbed=9	built:leaf=1 share=1	contracted:leaf=2 share=2	listed:leaf=2 share=2	valid%:leaf=85 share=85	leafOnly=0	keepCarriers=2	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+ISW AND (4 shares)	survivorsNoImage=0/0	wires=40	absorbed=20	built:leaf=1 share=1	contracted:leaf=2 share=2	listed:leaf=2 share=2	valid%:leaf=85 share=85	leafOnly=0	keepCarriers=2	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+ISW AND (5 shares)	survivorsNoImage=0/0	wires=65	absorbed=35	built:leaf=1 share=1	contracted:leaf=2 share=2	listed:leaf=2 share=2	valid%:leaf=84 share=84	leafOnly=0	keepCarriers=2	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+DOM AND (2 shares)	survivorsNoImage=0/0	wires=8	absorbed=2	built:leaf=1 share=2	contracted:leaf=1 share=4	listed:leaf=1 share=4	valid%:leaf=0 share=83	leafOnly=0	keepCarriers=1	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+DOM AND (2 shares) o2	survivorsNoImage=0/0	wires=8	absorbed=2	built:leaf=1 share=2	contracted:leaf=1 share=4	listed:leaf=1 share=4	valid%:leaf=0 share=83	leafOnly=0	keepCarriers=1	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+DOM AND (3 shares)	survivorsNoImage=0/0	wires=21	absorbed=9	built:leaf=1 share=1	contracted:leaf=4 share=36	listed:leaf=4 share=36	valid%:leaf=82 share=68	leafOnly=0	keepCarriers=4	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+DOM AND (3 shares) o3	survivorsNoImage=0/0	wires=21	absorbed=9	built:leaf=1 share=1	contracted:leaf=4 share=36	listed:leaf=4 share=36	valid%:leaf=82 share=68	leafOnly=0	keepCarriers=4	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+DOM AND (4 shares)	survivorsNoImage=0/0	wires=40	absorbed=20	built:leaf=1 share=1	contracted:leaf=36 share=576	listed:leaf=36 share=576	valid%:leaf=73 share=58	leafOnly=0	keepCarriers=36	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+Trichina AND	survivorsNoImage=0/0	wires=9	absorbed=3	built:leaf=1 share=1	contracted:leaf=2 share=8	listed:leaf=2 share=8	valid%:leaf=88 share=71	leafOnly=0	keepCarriers=2	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+Trichina AND (bad assoc)	survivorsNoImage=0/0	wires=9	absorbed=3	built:leaf=1 share=1	contracted:leaf=2 share=8	listed:leaf=2 share=8	valid%:leaf=88 share=80	leafOnly=0	keepCarriers=2	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+TI AND (3 shares)	survivorsNoImage=0/0	wires=15	absorbed=3	built:leaf=1 share=3	contracted:leaf=2 share=6	listed:leaf=2 share=6	valid%:leaf=80 share=88	leafOnly=0	keepCarriers=2	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+TI AND (3 shares) o2	survivorsNoImage=0/0	wires=15	absorbed=3	built:leaf=1 share=3	contracted:leaf=2 share=6	listed:leaf=2 share=6	valid%:leaf=80 share=88	leafOnly=0	keepCarriers=2	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+Additive refresh (3 shares)	survivorsNoImage=0/0	wires=4	absorbed=1	built:leaf=1 share=1	contracted:leaf=1 share=2	listed:leaf=1 share=2	valid%:leaf=0 share=75	leafOnly=0	keepCarriers=1	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+Additive refresh (4 shares)	survivorsNoImage=0/0	wires=6	absorbed=2	built:leaf=1 share=1	contracted:leaf=2 share=6	listed:leaf=2 share=6	valid%:leaf=83 share=73	leafOnly=0	keepCarriers=2	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+ISW refresh (3 shares)	survivorsNoImage=0/0	wires=6	absorbed=3	built:leaf=1 share=1	contracted:leaf=2 share=6	listed:leaf=2 share=6	valid%:leaf=83 share=70	leafOnly=0	keepCarriers=2	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+ISW refresh (4 shares)	survivorsNoImage=0/0	wires=12	absorbed=8	built:leaf=1 share=1	contracted:leaf=6 share=24	listed:leaf=6 share=24	valid%:leaf=71 share=53	leafOnly=0	keepCarriers=6	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+DOM Keccak χ (2 shares)	survivorsNoImage=0/0	wires=55	absorbed=20	built:leaf=5 share=5	contracted:leaf=5 share=5	listed:leaf=5 share=5	valid%:leaf=100 share=100	leafOnly=0	keepCarriers=5	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+DOM Keccak χ (3 shares)	survivorsNoImage=0/0	wires=125	absorbed=60	built:leaf=5 share=5	contracted:leaf=5 share=10	listed:leaf=5 share=10	valid%:leaf=100 share=97	leafOnly=0	keepCarriers=5	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+TI Keccak χ (3 shares)	survivorsNoImage=0/0	wires=95	absorbed=30	built:leaf=5 share=5	contracted:leaf=5 share=5	listed:leaf=5 share=5	valid%:leaf=100 share=100	leafOnly=0	keepCarriers=5	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+TI Keccak χ (3 shares) o2	survivorsNoImage=0/0	wires=95	absorbed=30	built:leaf=5 share=5	contracted:leaf=5 share=5	listed:leaf=5 share=5	valid%:leaf=100 share=100	leafOnly=0	keepCarriers=5	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+Q⁴₁₂ (2-share direct)	survivorsNoImage=0/0	wires=30	absorbed=14	built:leaf=1 share=2	contracted:leaf=1 share=4	listed:leaf=1 share=3	valid%:leaf=0 share=46	leafOnly=0	keepCarriers=1	dupWires=12	survivorsOutside:leaf=0 share=8	checks=ok
+Q⁴₁₂ TI (3 shares)	survivorsNoImage=0/0	wires=45	absorbed=12	built:leaf=2 share=18	contracted:leaf=2 share=18	listed:leaf=2 share=18	valid%:leaf=100 share=100	leafOnly=0	keepCarriers=2	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+TI Fides AB1 (4 shares)	survivorsNoImage=0/0	wires=592	absorbed=412	built:leaf=2 share=2	contracted:leaf=2 share=2	listed:leaf=1 share=1	valid%:leaf=0 share=0	leafOnly=0	keepCarriers=2	dupWires=28	survivorsOutside:leaf=0 share=2	checks=ok
+x+yz TI direct (3 shares)	survivorsNoImage=0/0	wires=18	absorbed=6	built:leaf=1 share=3	contracted:leaf=2 share=6	listed:leaf=2 share=6	valid%:leaf=83 share=90	leafOnly=0	keepCarriers=2	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+x+yz TI with CT (3 shares)	survivorsNoImage=0/0	wires=18	absorbed=6	built:leaf=1 share=3	contracted:leaf=2 share=6	listed:leaf=2 share=6	valid%:leaf=83 share=90	leafOnly=0	keepCarriers=2	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+x+yz TI (4 shares)	survivorsNoImage=0/0	wires=33	absorbed=13	built:leaf=1 share=1	contracted:leaf=2 share=8	listed:leaf=2 share=8	valid%:leaf=69 share=73	leafOnly=0	keepCarriers=2	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+x+yz TI (4 shares) o3	survivorsNoImage=0/0	wires=33	absorbed=13	built:leaf=1 share=1	contracted:leaf=2 share=8	listed:leaf=2 share=8	valid%:leaf=69 share=73	leafOnly=0	keepCarriers=2	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+x+yz+xyz TI (4 shares)	survivorsNoImage=0/0	wires=90	absorbed=45	built:leaf=1 share=1	contracted:leaf=1 share=1	listed:leaf=1 share=1	valid%:leaf=0 share=0	leafOnly=0	keepCarriers=1	dupWires=2	survivorsOutside:leaf=0 share=0	checks=ok
+xy TI virtual variable	survivorsNoImage=0	wires=33	absorbed=15	built:leaf=1 share=0	contracted:leaf=2 share=0	listed:leaf=2 share=0	valid%:leaf=63 share=0	leafOnly=1	keepCarriers=0	dupWires=0	survivorsOutside:leaf=0 share=0	checks=sharing [z1] carries 0 secrets ([]); expected exactly one — sharings m
+xy TI virtual share	survivorsNoImage=0/0	wires=23	absorbed=9	built:leaf=1 share=1	contracted:leaf=2 share=2	listed:leaf=2 share=2	valid%:leaf=78 share=78	leafOnly=0	keepCarriers=2	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+xy TI 4to3 shares	survivorsNoImage=0/0	wires=17	absorbed=4	built:leaf=1 share=1	contracted:leaf=1 share=1	listed:leaf=1 share=1	valid%:leaf=0 share=0	leafOnly=0	keepCarriers=1	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+Q31 d+1	survivorsNoImage=0/0	wires=18	absorbed=8	built:leaf=1 share=2	contracted:leaf=1 share=4	listed:leaf=1 share=3	valid%:leaf=0 share=22	leafOnly=0	keepCarriers=1	dupWires=12	survivorsOutside:leaf=0 share=8	checks=ok
+Q32 d+1	survivorsNoImage=0/0	wires=26	absorbed=12	built:leaf=1 share=2	contracted:leaf=1 share=2	listed:leaf=1 share=2	valid%:leaf=0 share=69	leafOnly=0	keepCarriers=1	dupWires=8	survivorsOutside:leaf=0 share=4	checks=ok
+Q33 d+1	survivorsNoImage=0/0	wires=40	absorbed=22	built:leaf=1 share=2	contracted:leaf=1 share=2	listed:leaf=1 share=2	valid%:leaf=0 share=90	leafOnly=0	keepCarriers=1	dupWires=4	survivorsOutside:leaf=0 share=2	checks=ok
+Q44 d+1	survivorsNoImage=0/0	wires=22	absorbed=10	built:leaf=1 share=4	contracted:leaf=1 share=8	listed:leaf=1 share=5	valid%:leaf=0 share=18	leafOnly=0	keepCarriers=1	dupWires=16	survivorsOutside:leaf=0 share=10	checks=ok
+Q412 d+1	survivorsNoImage=0/0	wires=30	absorbed=14	built:leaf=1 share=4	contracted:leaf=1 share=4	listed:leaf=1 share=3	valid%:leaf=0 share=60	leafOnly=0	keepCarriers=1	dupWires=12	survivorsOutside:leaf=0 share=6	checks=ok
+Q4293 d+1	survivorsNoImage=0/0	wires=36	absorbed=16	built:leaf=1 share=2	contracted:leaf=1 share=2	listed:leaf=1 share=2	valid%:leaf=0 share=66	leafOnly=0	keepCarriers=1	dupWires=12	survivorsOutside:leaf=0 share=6	checks=ok
+Q4294 d+1	survivorsNoImage=0/0	wires=28	absorbed=12	built:leaf=1 share=2	contracted:leaf=1 share=4	listed:leaf=1 share=3	valid%:leaf=0 share=35	leafOnly=0	keepCarriers=1	dupWires=16	survivorsOutside:leaf=0 share=10	checks=ok
+Q4299 d+1	survivorsNoImage=0/0	wires=44	absorbed=24	built:leaf=1 share=2	contracted:leaf=1 share=2	listed:leaf=1 share=2	valid%:leaf=0 share=72	leafOnly=0	keepCarriers=1	dupWires=12	survivorsOutside:leaf=0 share=2	checks=ok
+Q4300 d+1	survivorsNoImage=0/0	wires=44	absorbed=24	built:leaf=1 share=4	contracted:leaf=1 share=4	listed:leaf=1 share=3	valid%:leaf=0 share=81	leafOnly=0	keepCarriers=1	dupWires=8	survivorsOutside:leaf=0 share=4	checks=ok
+DOM Keccak χ (4 shares)	survivorsNoImage=0/0	wires=225	absorbed=120	built:leaf=5 share=5	contracted:leaf=10 share=30	listed:leaf=10 share=30	valid%:leaf=97 share=93	leafOnly=0	keepCarriers=10	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+DOM AND (5 shares)	survivorsNoImage=0/0	wires=65	absorbed=35	built:leaf=1 share=1	contracted:leaf=576 share=14400	listed:leaf=576 share=14400	valid%:leaf=65 share=53	leafOnly=0	keepCarriers=576	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+ISW AND (5 shares)	survivorsNoImage=0/0	wires=65	absorbed=35	built:leaf=1 share=1	contracted:leaf=2 share=2	listed:leaf=2 share=2	valid%:leaf=84 share=84	leafOnly=0	keepCarriers=2	dupWires=0	survivorsOutside:leaf=0 share=0	checks=ok
+TI Fides AB1 (4 shares)	survivorsNoImage=0/0	wires=592	absorbed=412	built:leaf=2 share=2	contracted:leaf=2 share=2	listed:leaf=1 share=1	valid%:leaf=0 share=0	leafOnly=0	keepCarriers=2	dupWires=28	survivorsOutside:leaf=0 share=2	checks=ok
+
+## bench tier all 0 1
+ISW AND (2 shares)	1	tier=0	contract=true	S	leaf 2 + share 2 root=8/8	engine=5	cells=6	ms=0.2
+ISW AND (3 shares)	2	tier=0	contract=true	S	leaf 2 + share 2 root=210/210	engine=27	cells=69	ms=0.7
+ISW AND (4 shares)	3	tier=0	contract=true	S	leaf 2 + share 2 root=9880/9880	engine=111	cells=870	ms=5.1
+ISW AND (5 shares)	4	tier=0	contract=true	S	leaf 2 + share 2 root=677040/677040	engine=485	cells=14117	ms=64.7
+DOM AND (2 shares)	1	tier=0	contract=true	S	leaf 1 + share 4 root=3/8	engine=2	cells=3	ms=0.1
+DOM AND (2 shares) o2	2	tier=0	contract=true	I	leaf 1 + share 4 root=13/28	engine=1	cells=1	ms=0.1
+DOM AND (3 shares)	2	tier=0	contract=true	S	leaf 4 + share 36 root=62/210	engine=9	cells=28	ms=1.7
+DOM AND (3 shares) o3	3	tier=0	contract=true	I	leaf 4 + share 36 root=518/1330	engine=1	cells=1	ms=1.5
+DOM AND (4 shares)	3	tier=0	contract=true	S	leaf 36 + share 24* root=3461/9880	engine=35	cells=573	ms=9.1
+Trichina AND	1	tier=0	contract=true	S	leaf 2 + share 8 root=6/9	engine=4	cells=6	ms=0.2
+Trichina AND (bad assoc)	1	tier=0	contract=true	I	leaf 2 + share 8 root=6/9	engine=2	cells=3	ms=0.2
+TI AND (3 shares)	1	tier=0	contract=true	S	leaf 2 + share 6 root=4/15	engine=2	cells=4	ms=0.3
+TI AND (3 shares) o2	2	tier=0	contract=true	I	leaf 2 + share 6 root=32/105	engine=3	cells=5	ms=0.4
+Additive refresh (3 shares)	2	tier=0	contract=true	S	leaf 1 + share 2 root=6/6	engine=3	cells=4	ms=0.0
+Additive refresh (4 shares)	3	tier=0	contract=true	S	leaf 2 + share 6 root=20/20	engine=4	cells=9	ms=0.2
+ISW refresh (3 shares)	2	tier=0	contract=true	S	leaf 2 + share 6 root=10/15	engine=3	cells=5	ms=0.1
+ISW refresh (4 shares)	3	tier=0	contract=true	S	leaf 6 + share 24 root=160/220	engine=4	cells=29	ms=0.9
+DOM Keccak χ (2 shares)	1	tier=0	contract=true	S	leaf 5 + share 5 root=11/55	engine=6	cells=11	ms=1.6
+DOM Keccak χ (3 shares)	2	tier=0	contract=true	S	leaf 5 + share 10 root=910/7750	engine=46	cells=284	ms=7.3
+TI Keccak χ (3 shares)	1	tier=0	contract=true	S	leaf 5 + share 5 root=19/95	engine=6	cells=19	ms=2.5
+TI Keccak χ (3 shares) o2	2	tier=0	contract=true	I	leaf 5 + share 5 root=931/4465	engine=32	cells=100	ms=3.9
+Q⁴₁₂ (2-share direct)	1	tier=0	contract=true	S	leaf 1 + share 4 root=30/30	engine=8	cells=12	ms=0.4
+Q⁴₁₂ TI (3 shares)	1	tier=0	contract=true	S	leaf 2 + share 18 root=15/45	engine=1	cells=15	ms=1.4
+TI Fides AB1 (4 shares)	1	tier=0	contract=true	S	leaf 1 + share 2 root=592/592	engine=31	cells=31	ms=24.3
+x+yz TI direct (3 shares)	1	tier=0	contract=true	S	leaf 2 + share 6 root=5/18	engine=2	cells=5	ms=0.4
+x+yz TI with CT (3 shares)	1	tier=0	contract=true	S	leaf 2 + share 6 root=5/18	engine=2	cells=5	ms=0.4
+x+yz TI (4 shares)	2	tier=0	contract=true	S	leaf 2 + share 8 root=371/528	engine=34	cells=104	ms=1.7
+x+yz TI (4 shares) o3	3	tier=0	contract=true	I	leaf 2 + share 8 root=3810/5456	engine=19	cells=91	ms=1.7
+x+yz+xyz TI (4 shares)	1	tier=0	contract=true	S	leaf 1 + share 1 root=90/90	engine=22	cells=22	ms=1.3
+xy TI virtual variable	1	tier=0	contract=true	S	leaf 2 root=33/33	engine=5	cells=6	ms=0.3
+xy TI virtual share	1	tier=0	contract=true	S	leaf 2 + share 2 root=23/23	engine=5	cells=6	ms=0.3
+xy TI 4to3 shares	1	tier=0	contract=true	S	leaf 1 + share 1 root=17/17	engine=7	cells=7	ms=0.1
+Q31 d+1	1	tier=0	contract=true	S	leaf 1 + share 4 root=18/18	engine=4	cells=6	ms=0.2
+Q32 d+1	1	tier=0	contract=true	S	leaf 1 + share 2 root=17/26	engine=8	cells=12	ms=0.3
+Q33 d+1	1	tier=0	contract=true	I	leaf 1 + share 2 root=22/40	engine=5	cells=9	ms=0.4
+Q44 d+1	1	tier=0	contract=true	S	leaf 1 + share 8 root=22/22	engine=5	cells=7	ms=0.4
+Q412 d+1	1	tier=0	contract=true	S	leaf 1 + share 4 root=21/30	engine=9	cells=13	ms=0.4
+Q4293 d+1	1	tier=0	contract=true	S	leaf 1 + share 2 root=24/36	engine=9	cells=15	ms=0.4
+Q4294 d+1	1	tier=0	contract=true	S	leaf 1 + share 4 root=28/28	engine=6	cells=9	ms=0.5
+Q4299 d+1	1	tier=0	contract=true	S	leaf 1 + share 2 root=28/44	engine=11	cells=20	ms=0.7
+Q4300 d+1	1	tier=0	contract=true	I	leaf 1 + share 4 root=26/44	engine=5	cells=9	ms=0.5
+DOM Keccak χ (4 shares)	3	tier=0	contract=true	S	leaf 10 + share 30 root=169289/1873200	engine=576	cells=13373	ms=136.2
+DOM AND (5 shares)	4	tier=0	contract=true	S	leaf 48* + share 24* root=266398/677040	engine=243	cells=13715	ms=83.4
+ISW AND (5 shares)	4	tier=0	contract=true	S	leaf 2 + share 2 root=677040/677040	engine=485	cells=14117	ms=66.9
+TI Fides AB1 (4 shares)	1	tier=0	contract=true	S	leaf 1 + share 2 root=592/592	engine=31	cells=31	ms=24.1
+all	tier=0	contract=true	verdicts=SSSSSISISSISISSSSSSSISSSSSSISSSSSSISSSSSISSSS	engine=2324	cells=57787	ms=449.5
+
+## bench tier all 1 1
+ISW AND (2 shares)	1	tier=1	contract=true	S	leaf 2 root=8/8	engine=5	cells=6	ms=0.1
+ISW AND (3 shares)	2	tier=1	contract=true	S	leaf 2 root=210/210	engine=27	cells=69	ms=0.7
+ISW AND (4 shares)	3	tier=1	contract=true	S	leaf 2 root=9880/9880	engine=111	cells=870	ms=5.0
+ISW AND (5 shares)	4	tier=1	contract=true	S	leaf 2 root=677040/677040	engine=485	cells=14117	ms=62.7
+DOM AND (2 shares)	1	tier=1	contract=true	S	leaf 1 root=8/8	engine=6	cells=6	ms=0.1
+DOM AND (2 shares) o2	2	tier=1	contract=true	I	leaf 1 root=28/28	engine=1	cells=1	ms=0.1
+DOM AND (3 shares)	2	tier=1	contract=true	S	leaf 4 root=104/210	engine=20	cells=48	ms=1.1
+DOM AND (3 shares) o3	3	tier=1	contract=true	I	leaf 4 root=712/1330	engine=2	cells=2	ms=0.7
+DOM AND (4 shares)	3	tier=1	contract=true	S	leaf 36 root=3461/9880	engine=64	cells=547	ms=9.0
+Trichina AND	1	tier=1	contract=true	S	leaf 2 root=9/9	engine=6	cells=7	ms=0.2
+Trichina AND (bad assoc)	1	tier=1	contract=true	I	leaf 2 root=9/9	engine=4	cells=5	ms=0.1
+TI AND (3 shares)	1	tier=1	contract=true	S	leaf 2 root=15/15	engine=5	cells=6	ms=0.3
+TI AND (3 shares) o2	2	tier=1	contract=true	I	leaf 2 root=105/105	engine=4	cells=5	ms=0.3
+Additive refresh (3 shares)	2	tier=1	contract=true	S	leaf 1 root=6/6	engine=3	cells=4	ms=0.0
+Additive refresh (4 shares)	3	tier=1	contract=true	S	leaf 2 root=20/20	engine=4	cells=7	ms=0.1
+ISW refresh (3 shares)	2	tier=1	contract=true	S	leaf 2 root=11/15	engine=3	cells=6	ms=0.1
+ISW refresh (4 shares)	3	tier=1	contract=true	S	leaf 6 root=160/220	engine=4	cells=29	ms=0.5
+DOM Keccak χ (2 shares)	1	tier=1	contract=true	S	leaf 5 root=11/55	engine=6	cells=11	ms=1.3
+DOM Keccak χ (3 shares)	2	tier=1	contract=true	S	leaf 5 root=1600/7750	engine=127	cells=621	ms=10.6
+TI Keccak χ (3 shares)	1	tier=1	contract=true	S	leaf 5 root=19/95	engine=6	cells=19	ms=2.2
+TI Keccak χ (3 shares) o2	2	tier=1	contract=true	I	leaf 5 root=931/4465	engine=32	cells=100	ms=3.5
+Q⁴₁₂ (2-share direct)	1	tier=1	contract=true	S	leaf 1 root=30/30	engine=14	cells=14	ms=0.4
+Q⁴₁₂ TI (3 shares)	1	tier=1	contract=true	S	leaf 2 root=45/45	engine=15	cells=15	ms=1.2
+TI Fides AB1 (4 shares)	1	tier=1	contract=true	S	leaf 1 root=592/592	engine=31	cells=31	ms=23.4
+x+yz TI direct (3 shares)	1	tier=1	contract=true	S	leaf 2 root=18/18	engine=6	cells=7	ms=0.4
+x+yz TI with CT (3 shares)	1	tier=1	contract=true	S	leaf 2 root=18/18	engine=8	cells=9	ms=0.4
+x+yz TI (4 shares)	2	tier=1	contract=true	S	leaf 2 root=528/528	engine=41	cells=105	ms=1.5
+x+yz TI (4 shares) o3	3	tier=1	contract=true	I	leaf 2 root=5456/5456	engine=14	cells=17	ms=0.8
+x+yz+xyz TI (4 shares)	1	tier=1	contract=true	S	leaf 1 root=90/90	engine=22	cells=22	ms=1.2
+xy TI virtual variable	1	tier=1	contract=true	S	leaf 2 root=33/33	engine=5	cells=6	ms=0.3
+xy TI virtual share	1	tier=1	contract=true	S	leaf 2 root=23/23	engine=5	cells=6	ms=0.3
+xy TI 4to3 shares	1	tier=1	contract=true	S	leaf 1 root=17/17	engine=7	cells=7	ms=0.1
+Q31 d+1	1	tier=1	contract=true	S	leaf 1 root=18/18	engine=7	cells=7	ms=0.2
+Q32 d+1	1	tier=1	contract=true	S	leaf 1 root=26/26	engine=13	cells=13	ms=0.3
+Q33 d+1	1	tier=1	contract=true	I	leaf 1 root=40/40	engine=9	cells=9	ms=0.3
+Q44 d+1	1	tier=1	contract=true	S	leaf 1 root=22/22	engine=8	cells=8	ms=0.3
+Q412 d+1	1	tier=1	contract=true	S	leaf 1 root=30/30	engine=14	cells=14	ms=0.4
+Q4293 d+1	1	tier=1	contract=true	S	leaf 1 root=36/36	engine=16	cells=16	ms=0.5
+Q4294 d+1	1	tier=1	contract=true	S	leaf 1 root=28/28	engine=12	cells=12	ms=0.3
+Q4299 d+1	1	tier=1	contract=true	S	leaf 1 root=44/44	engine=18	cells=18	ms=0.8
+Q4300 d+1	1	tier=1	contract=true	I	leaf 1 root=44/44	engine=9	cells=9	ms=0.4
+DOM Keccak χ (4 shares)	3	tier=1	contract=true	S	leaf 10 root=226855/1873200	engine=2303	cells=31315	ms=389.3
+DOM AND (5 shares)	4	tier=1	contract=true	S	leaf 48* root=377022/677040	engine=435	cells=17015	ms=99.3
+ISW AND (5 shares)	4	tier=1	contract=true	S	leaf 2 root=677040/677040	engine=485	cells=14117	ms=65.3
+TI Fides AB1 (4 shares)	1	tier=1	contract=true	S	leaf 1 root=592/592	engine=31	cells=31	ms=23.8
+all	tier=1	contract=true	verdicts=SSSSSISISSISISSSSSSSISSSSSSISSSSSSISSSSSISSSS	engine=4453	cells=79309	ms=712.4
+
+## bench tier all 2 1
+ISW AND (2 shares)	1	tier=2	contract=true	S	share 2 root=8/8	engine=5	cells=6	ms=0.2
+ISW AND (3 shares)	2	tier=2	contract=true	S	share 2 root=210/210	engine=27	cells=69	ms=0.7
+ISW AND (4 shares)	3	tier=2	contract=true	S	share 2 root=9880/9880	engine=111	cells=870	ms=4.9
+ISW AND (5 shares)	4	tier=2	contract=true	S	share 2 root=677040/677040	engine=485	cells=14117	ms=64.6
+DOM AND (2 shares)	1	tier=2	contract=true	S	share 4 root=3/8	engine=2	cells=3	ms=0.1
+DOM AND (2 shares) o2	2	tier=2	contract=true	I	share 4 root=13/28	engine=1	cells=1	ms=0.1
+DOM AND (3 shares)	2	tier=2	contract=true	S	share 36 root=62/210	engine=9	cells=28	ms=1.5
+DOM AND (3 shares) o3	3	tier=2	contract=true	I	share 36 root=518/1330	engine=1	cells=1	ms=1.3
+DOM AND (4 shares)	3	tier=2	contract=true	S	share 24* root=3611/9880	engine=38	cells=611	ms=7.9
+Trichina AND	1	tier=2	contract=true	S	share 8 root=6/9	engine=4	cells=6	ms=0.2
+Trichina AND (bad assoc)	1	tier=2	contract=true	I	share 8 root=6/9	engine=2	cells=3	ms=0.2
+TI AND (3 shares)	1	tier=2	contract=true	S	share 6 root=4/15	engine=2	cells=4	ms=0.3
+TI AND (3 shares) o2	2	tier=2	contract=true	I	share 6 root=32/105	engine=3	cells=5	ms=0.3
+Additive refresh (3 shares)	2	tier=2	contract=true	S	share 2 root=6/6	engine=3	cells=4	ms=0.0
+Additive refresh (4 shares)	3	tier=2	contract=true	S	share 6 root=20/20	engine=4	cells=9	ms=0.2
+ISW refresh (3 shares)	2	tier=2	contract=true	S	share 6 root=10/15	engine=3	cells=5	ms=0.1
+ISW refresh (4 shares)	3	tier=2	contract=true	S	share 24 root=220/220	engine=4	cells=12	ms=0.7
+DOM Keccak χ (2 shares)	1	tier=2	contract=true	S	share 5 root=11/55	engine=6	cells=11	ms=1.3
+DOM Keccak χ (3 shares)	2	tier=2	contract=true	S	share 10 root=910/7750	engine=46	cells=284	ms=6.8
+TI Keccak χ (3 shares)	1	tier=2	contract=true	S	share 5 root=19/95	engine=6	cells=19	ms=2.1
+TI Keccak χ (3 shares) o2	2	tier=2	contract=true	I	share 5 root=931/4465	engine=32	cells=100	ms=3.6
+Q⁴₁₂ (2-share direct)	1	tier=2	contract=true	S	share 4 root=30/30	engine=8	cells=12	ms=0.4
+Q⁴₁₂ TI (3 shares)	1	tier=2	contract=true	S	share 18 root=15/45	engine=1	cells=15	ms=1.3
+TI Fides AB1 (4 shares)	1	tier=2	contract=true	S	share 2 root=592/592	engine=31	cells=31	ms=24.1
+x+yz TI direct (3 shares)	1	tier=2	contract=true	S	share 6 root=5/18	engine=2	cells=5	ms=0.4
+x+yz TI with CT (3 shares)	1	tier=2	contract=true	S	share 6 root=5/18	engine=2	cells=5	ms=0.4
+x+yz TI (4 shares)	2	tier=2	contract=true	S	share 8 root=371/528	engine=34	cells=104	ms=1.5
+x+yz TI (4 shares) o3	3	tier=2	contract=true	I	share 8 root=3810/5456	engine=19	cells=91	ms=1.6
+x+yz+xyz TI (4 shares)	1	tier=2	contract=true	S	share 1 root=90/90	engine=22	cells=22	ms=1.2
+xy TI virtual variable	1	tier=2	contract=true	S	leaf 2 root=33/33	engine=5	cells=6	ms=0.3
+xy TI virtual share	1	tier=2	contract=true	S	share 2 root=23/23	engine=5	cells=6	ms=0.3
+xy TI 4to3 shares	1	tier=2	contract=true	S	share 1 root=17/17	engine=7	cells=7	ms=0.1
+Q31 d+1	1	tier=2	contract=true	S	share 4 root=18/18	engine=4	cells=6	ms=0.2
+Q32 d+1	1	tier=2	contract=true	S	share 2 root=17/26	engine=8	cells=12	ms=0.3
+Q33 d+1	1	tier=2	contract=true	I	share 2 root=22/40	engine=5	cells=9	ms=0.3
+Q44 d+1	1	tier=2	contract=true	S	share 8 root=22/22	engine=5	cells=7	ms=0.4
+Q412 d+1	1	tier=2	contract=true	S	share 4 root=21/30	engine=9	cells=13	ms=0.4
+Q4293 d+1	1	tier=2	contract=true	S	share 2 root=24/36	engine=9	cells=15	ms=0.4
+Q4294 d+1	1	tier=2	contract=true	S	share 4 root=28/28	engine=6	cells=9	ms=0.3
+Q4299 d+1	1	tier=2	contract=true	S	share 2 root=28/44	engine=11	cells=20	ms=0.6
+Q4300 d+1	1	tier=2	contract=true	I	share 4 root=26/44	engine=5	cells=9	ms=0.5
+DOM Keccak χ (4 shares)	3	tier=2	contract=true	S	share 30 root=169289/1873200	engine=579	cells=13415	ms=133.5
+DOM AND (5 shares)	4	tier=2	contract=true	S	share 24* root=266398/677040	engine=239	cells=12018	ms=68.9
+ISW AND (5 shares)	4	tier=2	contract=true	S	share 2 root=677040/677040	engine=485	cells=14117	ms=65.0
+TI Fides AB1 (4 shares)	1	tier=2	contract=true	S	share 2 root=592/592	engine=31	cells=31	ms=23.8
+all	tier=2	contract=true	verdicts=SSSSSISISSISISSSSSSSISSSSSSISSSSSSISSSSSISSSS	engine=2326	cells=56153	ms=425.4
+
+## bench tier all 0 0
+ISW AND (2 shares)	1	tier=0	contract=false	S	leaf 1 + share 1 root=8/8	engine=6	cells=6	ms=0.1
+ISW AND (3 shares)	2	tier=0	contract=false	S	leaf 1 + share 1 root=210/210	engine=27	cells=57	ms=0.7
+ISW AND (4 shares)	3	tier=0	contract=false	S	leaf 1 + share 1 root=9880/9880	engine=116	cells=676	ms=4.7
+ISW AND (5 shares)	4	tier=0	contract=false	S	leaf 1 + share 1 root=677040/677040	engine=521	cells=11063	ms=57.0
+DOM AND (2 shares)	1	tier=0	contract=false	S	leaf 1 + share 2 root=4/8	engine=3	cells=4	ms=0.1
+DOM AND (2 shares) o2	2	tier=0	contract=false	I	leaf 1 + share 2 root=16/28	engine=1	cells=1	ms=0.0
+DOM AND (3 shares)	2	tier=0	contract=false	S	leaf 1 + share 1 root=210/210	engine=30	cells=68	ms=0.6
+DOM AND (3 shares) o3	3	tier=0	contract=false	I	leaf 1 + share 1 root=1330/1330	engine=1	cells=1	ms=0.1
+DOM AND (4 shares)	3	tier=0	contract=false	S	leaf 1 + share 1 root=9880/9880	engine=160	cells=1027	ms=6.5
+Trichina AND	1	tier=0	contract=false	S	leaf 1 + share 1 root=9/9	engine=7	cells=7	ms=0.0
+Trichina AND (bad assoc)	1	tier=0	contract=false	I	leaf 1 + share 1 root=9/9	engine=5	cells=5	ms=0.0
+TI AND (3 shares)	1	tier=0	contract=false	S	leaf 1 + share 3 root=5/15	engine=1	cells=5	ms=0.3
+TI AND (3 shares) o2	2	tier=0	contract=false	I	leaf 1 + share 3 root=40/105	engine=4	cells=5	ms=0.3
+Additive refresh (3 shares)	2	tier=0	contract=false	S	leaf 1 + share 1 root=6/6	engine=3	cells=4	ms=0.0
+Additive refresh (4 shares)	3	tier=0	contract=false	S	leaf 1 + share 1 root=20/20	engine=4	cells=7	ms=0.0
+ISW refresh (3 shares)	2	tier=0	contract=false	S	leaf 1 + share 1 root=15/15	engine=3	cells=4	ms=0.0
+ISW refresh (4 shares)	3	tier=0	contract=false	S	leaf 1 + share 1 root=220/220	engine=4	cells=8	ms=0.1
+DOM Keccak χ (2 shares)	1	tier=0	contract=false	S	leaf 5 + share 5 root=11/55	engine=6	cells=11	ms=1.9
+DOM Keccak χ (3 shares)	2	tier=0	contract=false	S	leaf 5 + share 5 root=1600/7750	engine=127	cells=621	ms=11.6
+TI Keccak χ (3 shares)	1	tier=0	contract=false	S	leaf 5 + share 5 root=19/95	engine=6	cells=19	ms=3.3
+TI Keccak χ (3 shares) o2	2	tier=0	contract=false	I	leaf 5 + share 5 root=931/4465	engine=32	cells=100	ms=4.7
+Q⁴₁₂ (2-share direct)	1	tier=0	contract=false	S	leaf 1 + share 2 root=30/30	engine=14	cells=14	ms=0.4
+Q⁴₁₂ TI (3 shares)	1	tier=0	contract=false	S	leaf 2 + share 18 root=15/45	engine=1	cells=15	ms=1.5
+TI Fides AB1 (4 shares)	1	tier=0	contract=false	S	leaf 1 + share 2 root=592/592	engine=31	cells=31	ms=28.0
+x+yz TI direct (3 shares)	1	tier=0	contract=false	S	leaf 1 + share 3 root=6/18	engine=1	cells=6	ms=0.4
+x+yz TI with CT (3 shares)	1	tier=0	contract=false	S	leaf 1 + share 3 root=6/18	engine=1	cells=6	ms=0.4
+x+yz TI (4 shares)	2	tier=0	contract=false	S	leaf 1 + share 1 root=528/528	engine=45	cells=96	ms=1.2
+x+yz TI (4 shares) o3	3	tier=0	contract=false	I	leaf 1 + share 1 root=5456/5456	engine=15	cells=16	ms=0.5
+x+yz+xyz TI (4 shares)	1	tier=0	contract=false	S	leaf 1 + share 1 root=90/90	engine=22	cells=22	ms=1.3
+xy TI virtual variable	1	tier=0	contract=false	S	leaf 1 root=33/33	engine=6	cells=6	ms=0.2
+xy TI virtual share	1	tier=0	contract=false	S	leaf 1 + share 1 root=23/23	engine=6	cells=6	ms=0.2
+xy TI 4to3 shares	1	tier=0	contract=false	S	leaf 1 + share 1 root=17/17	engine=7	cells=7	ms=0.1
+Q31 d+1	1	tier=0	contract=false	S	leaf 1 + share 2 root=18/18	engine=4	cells=6	ms=0.2
+Q32 d+1	1	tier=0	contract=false	S	leaf 1 + share 2 root=17/26	engine=8	cells=12	ms=0.3
+Q33 d+1	1	tier=0	contract=false	I	leaf 1 + share 2 root=22/40	engine=5	cells=9	ms=0.4
+Q44 d+1	1	tier=0	contract=false	S	leaf 1 + share 4 root=22/22	engine=5	cells=7	ms=0.3
+Q412 d+1	1	tier=0	contract=false	S	leaf 1 + share 4 root=21/30	engine=9	cells=13	ms=0.5
+Q4293 d+1	1	tier=0	contract=false	S	leaf 1 + share 2 root=24/36	engine=9	cells=15	ms=0.4
+Q4294 d+1	1	tier=0	contract=false	S	leaf 1 + share 2 root=28/28	engine=6	cells=9	ms=0.3
+Q4299 d+1	1	tier=0	contract=false	S	leaf 1 + share 2 root=28/44	engine=11	cells=20	ms=0.7
+Q4300 d+1	1	tier=0	contract=false	I	leaf 1 + share 4 root=26/44	engine=5	cells=9	ms=0.7
+DOM Keccak χ (4 shares)	3	tier=0	contract=false	S	leaf 5 + share 5 root=384720/1873200	engine=2989	cells=52359	ms=559.7
+DOM AND (5 shares)	4	tier=0	contract=false	S	leaf 1 + share 1 root=677040/677040	engine=843	cells=23160	ms=106.2
+ISW AND (5 shares)	4	tier=0	contract=false	S	leaf 1 + share 1 root=677040/677040	engine=521	cells=11063	ms=58.4
+TI Fides AB1 (4 shares)	1	tier=0	contract=false	S	leaf 1 + share 2 root=592/592	engine=31	cells=31	ms=28.3
+all	tier=0	contract=false	verdicts=SSSSSISISSISISSSSSSSISSSSSSISSSSSSISSSSSISSSS	engine=5662	cells=100637	ms=884.9
+
+## bench tier all 2 0
+ISW AND (2 shares)	1	tier=2	contract=false	S	share 1 root=8/8	engine=6	cells=6	ms=0.1
+ISW AND (3 shares)	2	tier=2	contract=false	S	share 1 root=210/210	engine=27	cells=57	ms=0.5
+ISW AND (4 shares)	3	tier=2	contract=false	S	share 1 root=9880/9880	engine=116	cells=676	ms=4.7
+ISW AND (5 shares)	4	tier=2	contract=false	S	share 1 root=677040/677040	engine=521	cells=11063	ms=58.8
+DOM AND (2 shares)	1	tier=2	contract=false	S	share 2 root=4/8	engine=3	cells=4	ms=0.1
+DOM AND (2 shares) o2	2	tier=2	contract=false	I	share 2 root=16/28	engine=1	cells=1	ms=0.0
+DOM AND (3 shares)	2	tier=2	contract=false	S	share 1 root=210/210	engine=30	cells=68	ms=0.7
+DOM AND (3 shares) o3	3	tier=2	contract=false	I	share 1 root=1330/1330	engine=1	cells=1	ms=0.1
+DOM AND (4 shares)	3	tier=2	contract=false	S	share 1 root=9880/9880	engine=160	cells=1027	ms=7.0
+Trichina AND	1	tier=2	contract=false	S	share 1 root=9/9	engine=7	cells=7	ms=0.0
+Trichina AND (bad assoc)	1	tier=2	contract=false	I	share 1 root=9/9	engine=5	cells=5	ms=0.0
+TI AND (3 shares)	1	tier=2	contract=false	S	share 3 root=5/15	engine=1	cells=5	ms=0.3
+TI AND (3 shares) o2	2	tier=2	contract=false	I	share 3 root=40/105	engine=4	cells=5	ms=0.4
+Additive refresh (3 shares)	2	tier=2	contract=false	S	share 1 root=6/6	engine=3	cells=4	ms=0.0
+Additive refresh (4 shares)	3	tier=2	contract=false	S	share 1 root=20/20	engine=4	cells=7	ms=0.0
+ISW refresh (3 shares)	2	tier=2	contract=false	S	share 1 root=15/15	engine=3	cells=4	ms=0.0
+ISW refresh (4 shares)	3	tier=2	contract=false	S	share 1 root=220/220	engine=4	cells=8	ms=0.1
+DOM Keccak χ (2 shares)	1	tier=2	contract=false	S	share 5 root=11/55	engine=6	cells=11	ms=1.8
+DOM Keccak χ (3 shares)	2	tier=2	contract=false	S	share 5 root=1600/7750	engine=127	cells=621	ms=11.7
+TI Keccak χ (3 shares)	1	tier=2	contract=false	S	share 5 root=19/95	engine=6	cells=19	ms=3.1
+TI Keccak χ (3 shares) o2	2	tier=2	contract=false	I	share 5 root=931/4465	engine=32	cells=100	ms=4.5
+Q⁴₁₂ (2-share direct)	1	tier=2	contract=false	S	share 2 root=30/30	engine=14	cells=14	ms=0.4
+Q⁴₁₂ TI (3 shares)	1	tier=2	contract=false	S	share 18 root=15/45	engine=1	cells=15	ms=1.5
+TI Fides AB1 (4 shares)	1	tier=2	contract=false	S	share 2 root=592/592	engine=31	cells=31	ms=30.4
+x+yz TI direct (3 shares)	1	tier=2	contract=false	S	share 3 root=6/18	engine=1	cells=6	ms=0.4
+x+yz TI with CT (3 shares)	1	tier=2	contract=false	S	share 3 root=6/18	engine=1	cells=6	ms=0.3
+x+yz TI (4 shares)	2	tier=2	contract=false	S	share 1 root=528/528	engine=45	cells=96	ms=1.2
+x+yz TI (4 shares) o3	3	tier=2	contract=false	I	share 1 root=5456/5456	engine=15	cells=16	ms=0.5
+x+yz+xyz TI (4 shares)	1	tier=2	contract=false	S	share 1 root=90/90	engine=22	cells=22	ms=1.4
+xy TI virtual variable	1	tier=2	contract=false	S	leaf 1 root=33/33	engine=6	cells=6	ms=0.2
+xy TI virtual share	1	tier=2	contract=false	S	share 1 root=23/23	engine=6	cells=6	ms=0.2
+xy TI 4to3 shares	1	tier=2	contract=false	S	share 1 root=17/17	engine=7	cells=7	ms=0.1
+Q31 d+1	1	tier=2	contract=false	S	share 2 root=18/18	engine=4	cells=6	ms=0.2
+Q32 d+1	1	tier=2	contract=false	S	share 2 root=17/26	engine=8	cells=12	ms=0.3
+Q33 d+1	1	tier=2	contract=false	I	share 2 root=22/40	engine=5	cells=9	ms=0.5
+Q44 d+1	1	tier=2	contract=false	S	share 4 root=22/22	engine=5	cells=7	ms=0.3
+Q412 d+1	1	tier=2	contract=false	S	share 4 root=21/30	engine=9	cells=13	ms=0.5
+Q4293 d+1	1	tier=2	contract=false	S	share 2 root=24/36	engine=9	cells=15	ms=0.5
+Q4294 d+1	1	tier=2	contract=false	S	share 2 root=28/28	engine=6	cells=9	ms=0.3
+Q4299 d+1	1	tier=2	contract=false	S	share 2 root=28/44	engine=11	cells=20	ms=0.7
+Q4300 d+1	1	tier=2	contract=false	I	share 4 root=26/44	engine=5	cells=9	ms=0.6
+DOM Keccak χ (4 shares)	3	tier=2	contract=false	S	share 5 root=384720/1873200	engine=2989	cells=52359	ms=567.8
+DOM AND (5 shares)	4	tier=2	contract=false	S	share 1 root=677040/677040	engine=843	cells=23160	ms=106.9
+ISW AND (5 shares)	4	tier=2	contract=false	S	share 1 root=677040/677040	engine=521	cells=11063	ms=58.5
+TI Fides AB1 (4 shares)	1	tier=2	contract=false	S	share 2 root=592/592	engine=31	cells=31	ms=28.7
+all	tier=2	contract=false	verdicts=SSSSSISISSISISSSSSSSISSSSSSISSSSSSISSSSSISSSS	engine=5662	cells=100637	ms=898.7
+
+## bench transport
+ISW AND (2 shares)	1	leaves=2^5	per-table budget=104858	leaf: elements=1 tested=13 violations=0	share: elements=1 tested=13 violations=0	free relabellings: tested=0 violations=0	corrupted tables: 2/2 caught
+ISW AND (3 shares)	2	leaves=2^9	per-table budget=6554	leaf: elements=1 tested=683 violations=0	share: elements=1 tested=683 violations=0	free relabellings: tested=115 violations=0	corrupted tables: 2/2 caught
+ISW AND (4 shares)	3	leaves=2^14	per-table budget=205	leaf: elements=1 tested=331 violations=0	share: elements=1 tested=333 violations=0	free relabellings: tested=226 violations=0	corrupted tables: 2/2 caught
+ISW AND (5 shares)	skipped (too many leaves)
+DOM AND (2 shares)	1	leaves=2^5	per-table budget=95326	leaf: elements=0 tested=0 violations=0	share: elements=3 tested=75 violations=0	free relabellings: tested=0 violations=0	corrupted tables: 3/3 caught
+DOM AND (2 shares) o2	2	leaves=2^5	per-table budget=95326	leaf: elements=0 tested=0 violations=0	share: elements=3 tested=153 violations=0	free relabellings: tested=0 violations=0	corrupted tables: 3/3 caught
+DOM AND (3 shares)	2	leaves=2^9	per-table budget=1425	leaf: elements=3 tested=2514 violations=0	share: elements=35 tested=18090 violations=0	free relabellings: tested=159 violations=0	corrupted tables: 7/7 caught
+DOM AND (3 shares) o3	3	leaves=2^9	per-table budget=1425	leaf: elements=3 tested=6264 violations=0	share: elements=35 tested=48171 violations=0	free relabellings: tested=615 violations=0	corrupted tables: 7/7 caught
+DOM AND (4 shares)	3	leaves=2^14	per-table budget=32	leaf: elements=35 tested=2146 violations=0	share: elements=23 tested=1468 violations=0	free relabellings: tested=37 violations=0	corrupted tables: 7/8 caught
+Trichina AND	1	leaves=2^5	per-table budget=65537	leaf: elements=1 tested=15 violations=0	share: elements=7 tested=120 violations=0	free relabellings: tested=0 violations=0	corrupted tables: 5/5 caught
+Trichina AND (bad assoc)	1	leaves=2^5	per-table budget=65537	leaf: elements=1 tested=15 violations=0	share: elements=7 tested=142 violations=0	free relabellings: tested=0 violations=0	corrupted tables: 5/5 caught
+TI AND (3 shares)	1	leaves=2^6	per-table budget=37450	leaf: elements=1 tested=57 violations=0	share: elements=5 tested=453 violations=0	free relabellings: tested=12 violations=0	corrupted tables: 5/5 caught
+TI AND (3 shares) o2	2	leaves=2^6	per-table budget=37450	leaf: elements=1 tested=251 violations=0	share: elements=5 tested=1943 violations=0	free relabellings: tested=78 violations=0	corrupted tables: 5/5 caught
+Additive refresh (3 shares)	2	leaves=2^5	per-table budget=116509	leaf: elements=0 tested=0 violations=0	share: elements=1 tested=4 violations=0	free relabellings: tested=3 violations=0	corrupted tables: 0/1 caught
+Additive refresh (4 shares)	3	leaves=2^7	per-table budget=18725	leaf: elements=1 tested=14 violations=0	share: elements=5 tested=43 violations=0	free relabellings: tested=4 violations=0	corrupted tables: 0/5 caught
+ISW refresh (3 shares)	2	leaves=2^6	per-table budget=37450	leaf: elements=1 tested=20 violations=0	share: elements=5 tested=64 violations=0	free relabellings: tested=5 violations=0	corrupted tables: 4/5 caught
+ISW refresh (4 shares)	3	leaves=2^10	per-table budget=911	leaf: elements=5 tested=971 violations=0	share: elements=23 tested=1968 violations=0	free relabellings: tested=36 violations=0	corrupted tables: 8/8 caught
+DOM Keccak χ (2 shares)	1	leaves=2^15	per-table budget=65	leaf: elements=4 tested=480 violations=0	share: elements=4 tested=480 violations=0	free relabellings: tested=15 violations=0	corrupted tables: 2/8 caught
+DOM Keccak χ (3 shares)	skipped (too many leaves)
+TI Keccak χ (3 shares)	1	leaves=2^15	per-table budget=65	leaf: elements=4 tested=520 violations=0	share: elements=4 tested=520 violations=0	free relabellings: tested=10 violations=0	corrupted tables: 2/8 caught
+TI Keccak χ (3 shares) o2	2	leaves=2^15	per-table budget=65	leaf: elements=4 tested=520 violations=0	share: elements=4 tested=520 violations=0	free relabellings: tested=16 violations=0	corrupted tables: 3/8 caught
+Q⁴₁₂ (2-share direct)	1	leaves=2^8	per-table budget=13108	leaf: elements=0 tested=0 violations=0	share: elements=2 tested=210 violations=0	free relabellings: tested=25 violations=0	corrupted tables: 2/2 caught
+Q⁴₁₂ TI (3 shares)	1	leaves=2^12	per-table budget=316	leaf: elements=1 tested=26 violations=0	share: elements=17 tested=4487 violations=0	free relabellings: tested=20 violations=0	corrupted tables: 5/5 caught
+TI Fides AB1 (4 shares)	skipped (too many leaves)
+x+yz TI direct (3 shares)	1	leaves=2^9	per-table budget=4682	leaf: elements=1 tested=75 violations=0	share: elements=5 tested=657 violations=0	free relabellings: tested=12 violations=0	corrupted tables: 5/5 caught
+x+yz TI with CT (3 shares)	1	leaves=2^9	per-table budget=4682	leaf: elements=1 tested=75 violations=0	share: elements=5 tested=657 violations=0	free relabellings: tested=12 violations=0	corrupted tables: 5/5 caught
+x+yz TI (4 shares)	2	leaves=2^12	per-table budget=513	leaf: elements=1 tested=676 violations=0	share: elements=7 tested=4433 violations=0	free relabellings: tested=253 violations=0	corrupted tables: 5/5 caught
+x+yz TI (4 shares) o3	3	leaves=2^12	per-table budget=513	leaf: elements=1 tested=965 violations=0	share: elements=7 tested=6392 violations=0	free relabellings: tested=300 violations=0	corrupted tables: 5/5 caught
+x+yz+xyz TI (4 shares)	1	leaves=2^12	per-table budget=911	leaf: elements=0 tested=0 violations=0	share: elements=0 tested=0 violations=0	free relabellings: tested=77 violations=0	corrupted tables: 0/0 caught
+xy TI virtual variable	1	leaves=2^9	per-table budget=7282	leaf: elements=1 tested=186 violations=0	free relabellings: tested=32 violations=0	corrupted tables: 1/1 caught
+xy TI virtual share	1	leaves=2^7	per-table budget=26215	leaf: elements=1 tested=116 violations=0	share: elements=1 tested=116 violations=0	free relabellings: tested=22 violations=0	corrupted tables: 2/2 caught
+xy TI 4to3 shares	1	leaves=2^8	per-table budget=14564	leaf: elements=0 tested=0 violations=0	share: elements=0 tested=0 violations=0	free relabellings: tested=4 violations=0	corrupted tables: 0/0 caught
+Q31 d+1	1	leaves=2^6	per-table budget=52429	leaf: elements=0 tested=0 violations=0	share: elements=2 tested=24 violations=0	free relabellings: tested=8 violations=0	corrupted tables: 1/2 caught
+Q32 d+1	1	leaves=2^6	per-table budget=58255	leaf: elements=0 tested=0 violations=0	share: elements=1 tested=171 violations=0	free relabellings: tested=7 violations=0	corrupted tables: 1/1 caught
+Q33 d+1	1	leaves=2^6	per-table budget=58255	leaf: elements=0 tested=0 violations=0	share: elements=1 tested=666 violations=0	free relabellings: tested=16 violations=0	corrupted tables: 1/1 caught
+Q44 d+1	1	leaves=2^8	per-table budget=10923	leaf: elements=0 tested=0 violations=0	share: elements=4 tested=48 violations=0	free relabellings: tested=32 violations=0	corrupted tables: 2/4 caught
+Q412 d+1	1	leaves=2^8	per-table budget=13108	leaf: elements=0 tested=0 violations=0	share: elements=2 tested=342 violations=0	free relabellings: tested=23 violations=0	corrupted tables: 2/2 caught
+Q4293 d+1	1	leaves=2^8	per-table budget=14564	leaf: elements=0 tested=0 violations=0	share: elements=1 tested=300 violations=0	free relabellings: tested=26 violations=0	corrupted tables: 1/1 caught
+Q4294 d+1	1	leaves=2^8	per-table budget=13108	leaf: elements=0 tested=0 violations=0	share: elements=2 tested=114 violations=0	free relabellings: tested=26 violations=0	corrupted tables: 2/2 caught
+Q4299 d+1	1	leaves=2^8	per-table budget=14564	leaf: elements=0 tested=0 violations=0	share: elements=1 tested=528 violations=0	free relabellings: tested=26 violations=0	corrupted tables: 1/1 caught
+Q4300 d+1	1	leaves=2^8	per-table budget=13108	leaf: elements=0 tested=0 violations=0	share: elements=2 tested=1332 violations=0	free relabellings: tested=24 violations=0	corrupted tables: 2/2 caught
+DOM Keccak χ (4 shares)	skipped (too many leaves)
+DOM AND (5 shares)	skipped (too many leaves)
+ISW AND (5 shares)	skipped (too many leaves)
+TI Fides AB1 (4 shares)	skipped (too many leaves)
+group elements: tested=112653 violations=0	free relabellings: tested=2276 violations=0	corrupted tables caught=115/143	split-sharing swap maps v to w; distributions differ=true
+
+## bench trichina
+good  a0b0 = a0 * b0
+good  a0b1 = a0 * b1
+good  a1b0 = a1 * b0
+good  a1b1 = a1 * b1
+good  c0 = r
+good  c1 = a0b0 + a0b1 + a1b0 + a1b1 + r
+bad   a0b0 = a0 * b0
+bad   a0b1 = a0 * b1
+bad   a1b0 = a1 * b0
+bad   a1b1 = a1 * b1
+bad   c0 = r
+bad   c1 = a0b0 + a0b1 + a1b0 + a1b1 + r
+identical after contraction: true
