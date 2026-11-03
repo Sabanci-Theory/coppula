@@ -7,3 +7,4 @@ import Verif.Coupling
 import Verif.ProbeClosure
 import Verif.CellSearch
 import Verif.Symmetry
+import Verif.Necklace

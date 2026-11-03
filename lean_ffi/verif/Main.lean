@@ -1788,6 +1788,106 @@ def runBench : IO Unit := do
   for (name, g, d) in benchLarge do
     profileCalls name g d (if d == 1 then 300 else 2000)
 
+/-- The ring shape of a permutation, e.g. `3^6 1^2`: six rings of length 3, two of length 1. -/
+def ringShape (rings : Array (Array Nat)) : String :=
+  let lens := (rings.map (·.size)).qsort (· > ·)
+  let distinct := lens.foldl (fun a L => if a.contains L then a else a.push L) (#[] : Array Nat)
+  " ".intercalate (distinct.toList.map (fun L => s!"{L}^{(lens.filter (· == L)).size}"))
+
+/-- The chosen permutation of a gadget, and the tables of the group. -/
+def necklaceSetup (g : GlobalDAG) (d : Nat) : WireTables × Array (Array Nat) × NecklacePi :=
+  let E := WireTables.of (symmetryOf g defaultGroupCap) g.circuit.wireOrder
+  let pows := powerIndices (symmetryOf g defaultGroupCap)
+  (E, pows, choosePi E pows d)
+
+/-- `necklace <gadget>`: every distinct way of choosing `π`, the choice, its rings and
+    what the walk keeps. -/
+def runNecklaceShow (name : String) : IO Unit := do
+  match (benchSuite ++ benchLarge).find? (·.1 == name) with
+  | none => IO.eprintln s!"unknown gadget '{name}'"
+  | some (_, g, d) =>
+    let (E, pows, pi) := necklaceSetup g d
+    let ws := E.ws
+    IO.println s!"{name}: {ws.size} wires, d = {d}, {binomial ws.size d} probe sets, group of {E.fwd.size}"
+    let mut seen : Array (Nat × Nat × String × Nat) := #[]
+    for (ps, i) in pows.zipIdx do
+      let p := NecklacePi.of E ps i d
+      let key := (p.period, p.score, ringShape p.rings, p.loose.size)
+      if !seen.contains key then seen := seen.push key
+    for (m, sc, sh, l) in seen.qsort (fun a b => a.2.1 < b.2.1) do
+      IO.println s!"  period {m}\trings {sh}\tloose {l}\tscore {sc}"
+    IO.println s!"chosen: period {pi.period}, rings {ringShape pi.rings}, {pi.loose.size} loose, score {pi.score}"
+    for r in pi.rings do
+      if r.size > 1 then IO.println s!"  ring ({" ".intercalate (r.toList.map (ws[·]!))})"
+    IO.println s!"  fixed: {" ".intercalate ((pi.rings.filter (·.size == 1)).toList.map (fun r => ws[r[0]!]!))}"
+    for w in pi.loose do
+      let moves := (pi.powers.zipIdx.filter (fun (i, _) => E.fwd[i]![w]! < ws.size)).map (fun (i, k) =>
+        s!"π^{k + 1}: {ws[E.fwd[i]![w]!]!}")
+      IO.println s!"  loose {ws[w]!}  {", ".intercalate moves.toList}"
+    let tables := pi.powers.map (E.fwd[·]!)
+    IO.println s!"kept: {countLeast tables ws.size d}"
+
+/-- `bench necklace <gadget>`: one line.  `kept` is the walk with the powers of `π`,
+    `orbits` the same walk with the whole group, which is what any one `π` can reach at best. -/
+def benchNecklace (name : String) : IO Unit := do
+  match (benchSuite ++ benchLarge).find? (·.1 == name) with
+  | none => IO.eprintln s!"unknown gadget '{name}'"
+  | some (_, g, d) =>
+    let ws := g.circuit.wireOrder
+    let ((E, _, pi), tSetup) ← timeNs (fun _ => necklaceSetup g d)
+    let tables := pi.powers.map (E.fwd[·]!)
+    let (kept, tWalk) ← timeNs (fun _ => countLeast tables ws.size d)
+    let orbits := countLeast (E.fwd.extract 1 E.fwd.size) ws.size d
+    let (r, t) ← timeNs (fun _ => runNecklaces g tables d)
+    let ms (x : Nat) : String := s!"{x / 1000000}.{(x / 100000) % 10}"
+    let v := if r.result.isSecure then "S" else "I"
+    IO.println s!"NECK\t{name}\t{d}\t{v}\twires={ws.size}\tgroup={E.fwd.size}\tperiod={pi.period}\trings={ringShape pi.rings}\tloose={pi.loose.size}\ttotal={binomial ws.size d}\tscore={pi.score}\tkept={kept}\torbits={orbits}\tengine={r.engine}\tms={ms t}\tsetup_ms={ms tSetup}\twalk_ms={ms tWalk}"
+
+/-- `bench necklace-plain <gadget>`: the same loop with no symmetry: every probe set. -/
+def benchNecklacePlain (name : String) : IO Unit := do
+  match (benchSuite ++ benchLarge).find? (·.1 == name) with
+  | none => IO.eprintln s!"unknown gadget '{name}'"
+  | some (_, g, d) =>
+    let (r, t) ← timeNs (fun _ => runNecklaces g #[] d)
+    IO.println s!"NPLAIN\t{name}\t{d}\t{if r.result.isSecure then "S" else "I"}\tengine={r.engine}\tms={t / 1000000}.{(t / 100000) % 10}"
+
+/-- `bench necklace-score <gadget>`: the score against the true count, by walking, for
+    every distinct choice of `π`; skipped when that is too much work. -/
+def benchNecklaceScore (name : String) : IO Unit := do
+  match (benchSuite ++ benchLarge).find? (·.1 == name) with
+  | none => IO.eprintln s!"unknown gadget '{name}'"
+  | some (_, g, d) =>
+    let (E, pows, pi) := necklaceSetup g d
+    let n := E.n
+    let idT := Array.range n
+    let tablesOf (ps : Array Nat) := ps.map (E.fwd[·]!)
+    let mut seen : Array (Array Nat) := #[]
+    for ps in pows do
+      let k := ps.qsort (· < ·)
+      if !seen.contains k then seen := seen.push k
+    let work := binomial n d * seen.foldl (fun a k => a + k.size) 0
+    if work > 400000000 then
+      IO.println s!"NSCORE\t{name}\tskipped (work {work})"
+    else
+      let kept := countLeast (tablesOf pi.powers) n d
+      let trues := seen.map (fun k => countLeast (tablesOf k) n d)
+      let best := trues.foldl min kept
+      let wrong := (seen.zip trues).filter (fun (k, t) => necklaceCount (#[idT] ++ tablesOf k) n d != t)
+      IO.println s!"NSCORE\t{name}\t{d}\tchoices={seen.size}\tscore={pi.score}\tkept={kept}\tbestPossible={best}\tcountsWrong={wrong.size}"
+
+/-- `bench necklace-audit <gadget>`: the engine's verdict on every probe set against its
+    verdict on every shift.  Also the plain verdict over all probe sets. -/
+def benchNecklaceAudit (name : String) : IO Unit := do
+  match (benchSuite ++ benchLarge).find? (·.1 == name) with
+  | none => IO.eprintln s!"unknown gadget '{name}'"
+  | some (_, g, d) =>
+    let (E, _, _) := necklaceSetup g d
+    match necklaceAudit g (E.fwd.extract 1 E.fwd.size) d with
+    | none => IO.println s!"NAUDIT\t{name}\tskipped"
+    | some (pairs, bad) =>
+      let r := runNecklaces g #[] d
+      IO.println s!"NAUDIT\t{name}\t{d}\tplain={if r.result.isSecure then "S" else "I"}\tpairs={pairs}\tdisagree={bad}"
+
 end verif
 
 def main (args : List String) : IO UInt32 :=
@@ -1799,6 +1899,11 @@ def main (args : List String) : IO UInt32 :=
   | ["trace", name] => do verif.runTrace name; return 0
   | ["bench", "cells", name] => do verif.benchCellsOne name; return 0
   | ["bench", "sym", name] => do verif.benchSymOne name; return 0
+  | ["necklace", name] => do verif.runNecklaceShow name; return 0
+  | ["bench", "necklace", name] => do verif.benchNecklace name; return 0
+  | ["bench", "necklace-plain", name] => do verif.benchNecklacePlain name; return 0
+  | ["bench", "necklace-score", name] => do verif.benchNecklaceScore name; return 0
+  | ["bench", "necklace-audit", name] => do verif.benchNecklaceAudit name; return 0
   | ["bench", "ablate", name, sy, ea, u] => do
     verif.benchAblate name (sy == "1") (ea == "1") u.toNat!; return 0
   | ["bench", "setup", name] => do verif.benchSetup name; return 0
